@@ -11,6 +11,7 @@
 import { fork } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { getMetrics } from '../core/metrics.js';
 import type { SparnConfig } from '../types/config.js';
 
@@ -120,6 +121,8 @@ export function createDaemonCommand(): DaemonCommand {
 
     try {
       // Fork child process (daemon entry point)
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = dirname(__filename);
       const daemonPath = join(__dirname, 'index.js');
 
       const child = fork(daemonPath, [], {

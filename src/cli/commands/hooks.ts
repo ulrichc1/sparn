@@ -7,6 +7,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export interface HooksCommandOptions {
   /** Subcommand: install, uninstall, or status */
@@ -40,7 +41,11 @@ export async function hooksCommand(options: HooksCommandOptions): Promise<HooksC
     : join(process.cwd(), '.claude', 'settings.json');
 
   // Determine hook script paths (installed package location)
-  const hooksDir = join(dirname(dirname(dirname(__dirname))), 'dist', 'hooks');
+  // When bundled, this code runs from dist/cli/index.js
+  // So hooks are at dist/hooks (one level up from cli, then into hooks)
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const hooksDir = join(dirname(__dirname), 'hooks');
   const prePromptPath = join(hooksDir, 'pre-prompt.js');
   const postToolResultPath = join(hooksDir, 'post-tool-result.js');
 

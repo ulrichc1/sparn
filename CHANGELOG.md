@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-02-23
+
+### 🐛 Bug Fixes
+
+- **ES Module Compatibility**: Fixed `__dirname` usage in daemon and hooks commands
+  - Added `fileURLToPath` imports for ES module compatibility
+  - Daemon process now correctly resolves daemon entry point path
+  - Hooks command now correctly resolves hook script paths
+- **Configuration**: Updated default config to include `realtime` section
+
+### 📝 Notes
+
+- All 176 tests passing
+- Daemon functionality verified (Windows-specific detachment may vary)
+- Hooks install/uninstall/status commands fully operational
+
 ## [1.1.0] - 2026-02-22
 
 ### 🚀 Major Features Added

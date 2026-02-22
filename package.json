@@ -1,6 +1,6 @@
 {
   "name": "@ulrichc1/sparn",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "type": "module",
   "description": "Neuroscience-inspired context optimization for AI coding agents",
   "main": "dist/index.cjs",
