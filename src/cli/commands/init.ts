@@ -13,12 +13,22 @@ import { DEFAULT_CONFIG } from '../../types/config.js';
 import { getBanner } from '../ui/banner.js';
 import { brainPink, dim, neuralCyan } from '../ui/colors.js';
 
-// Get package.json version
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const pkgPath = join(__dirname, '../../../package.json');
-const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
-const VERSION = pkg.version;
+// Get package.json version from project root
+function getVersion(): string {
+  try {
+    // Try from current working directory first
+    const pkg = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf-8'));
+    return pkg.version;
+  } catch {
+    // Fallback: calculate from module location
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const pkg = JSON.parse(readFileSync(join(__dirname, '../../../package.json'), 'utf-8'));
+    return pkg.version;
+  }
+}
+
+const VERSION = getVersion();
 
 /**
  * Options for init command.

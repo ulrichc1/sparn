@@ -12,12 +12,22 @@ import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { getBanner } from './ui/banner.js';
 
-// Get package.json version
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const pkgPath = join(__dirname, '../../package.json');
-const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
-const VERSION = pkg.version;
+// Get package.json version from project root
+function getVersion(): string {
+  try {
+    // Try from current working directory first (most common case)
+    const pkg = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf-8'));
+    return pkg.version;
+  } catch {
+    // Fallback: calculate from module location
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const pkg = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf-8'));
+    return pkg.version;
+  }
+}
+
+const VERSION = getVersion();
 
 // Lazy-loaded imports (loaded only when commands are executed):
 // - createKVMemory (heavy: better-sqlite3)

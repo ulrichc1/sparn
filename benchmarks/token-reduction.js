@@ -7,8 +7,7 @@
 
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { optimizeCommand } from '../dist/cli/commands/optimize.js';
-import { createKVMemory } from '../dist/index.js';
+import { createKVMemory, createSparsePruner, estimateTokens } from '../dist/index.js';
 
 // Generate test context of specified size
 function generateContext(tokens) {
@@ -59,16 +58,29 @@ async function benchmarkSize(name, tokens) {
   const outputPath = join(tmpDir, 'output.txt');
   writeFileSync(inputPath, context, 'utf-8');
 
-  // Run optimization
+  // Run optimization using library API
   const startTime = Date.now();
-  const result = await optimizeCommand({
-    inputFile: inputPath,
-    outputFile: outputPath,
-    memory,
-    dryRun: false,
-    verbose: false,
-  });
+
+  // Initialize pruner
+  const pruner = createSparsePruner();
+
+  // Prune context (keep top 5%)
+  const pruneResult = pruner.prune(context, 5);
+
+  // Calculate results
+  const tokensBefore = estimateTokens(context);
+  const optimizedContext = pruneResult.prunedContext;
+  const tokensAfter = estimateTokens(optimizedContext);
   const duration = Date.now() - startTime;
+
+  // Write output
+  writeFileSync(outputPath, optimizedContext, 'utf-8');
+
+  const result = {
+    tokensBefore,
+    tokensAfter,
+    reduction: (tokensBefore - tokensAfter) / tokensBefore,
+  };
 
   // Cleanup
   await memory.close();
