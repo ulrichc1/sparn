@@ -1,5 +1,9 @@
 # Sparn
 
+[![npm version](https://img.shields.io/npm/v/@ulrichc1/sparn.svg)](https://www.npmjs.com/package/@ulrichc1/sparn)
+[![npm downloads](https://img.shields.io/npm/dm/@ulrichc1/sparn.svg)](https://www.npmjs.com/package/@ulrichc1/sparn)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 > 🧠 Neuroscience-inspired context optimization for AI coding agents
 
 **Status**: ✅ **Production Ready** - All Core Features Complete
@@ -121,7 +125,7 @@ Before/after token savings with progress bars and celebration messages:
 ### Global CLI Install
 
 ```bash
-npm install -g sparn
+npm install -g @ulrichc1/sparn
 
 # Verify installation
 sparn --version
@@ -130,11 +134,11 @@ sparn --version
 ### Project Dependency
 
 ```bash
-npm install sparn
+npm install @ulrichc1/sparn
 
 # Or with other package managers
-yarn add sparn
-pnpm add sparn
+yarn add @ulrichc1/sparn
+pnpm add @ulrichc1/sparn
 ```
 
 ---
