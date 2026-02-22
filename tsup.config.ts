@@ -4,6 +4,9 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
     'cli/index': 'src/cli/index.ts',
+    'daemon/index': 'src/daemon/index.ts',
+    'hooks/pre-prompt': 'src/hooks/pre-prompt.ts',
+    'hooks/post-tool-result': 'src/hooks/post-tool-result.ts',
   },
   format: ['cjs', 'esm'],
   dts: true,

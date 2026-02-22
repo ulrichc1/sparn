@@ -55,6 +55,35 @@ export interface UIConfig {
 }
 
 /**
+ * Real-time optimization configuration.
+ */
+export interface RealtimeConfig {
+  /** Target token budget for optimized context (default: 50000) */
+  tokenBudget: number;
+
+  /** Token threshold that triggers auto-optimization (default: 80000) */
+  autoOptimizeThreshold: number;
+
+  /** File patterns to watch for changes (default: ['**\/*.jsonl']) */
+  watchPatterns: string[];
+
+  /** Daemon PID file path (default: '.sparn/daemon.pid') */
+  pidFile: string;
+
+  /** Daemon log file path (default: '.sparn/daemon.log') */
+  logFile: string;
+
+  /** Debounce delay in milliseconds for file changes (default: 5000) */
+  debounceMs: number;
+
+  /** Enable incremental optimization (default: true) */
+  incremental: boolean;
+
+  /** Sliding window size for context entries (default: 500) */
+  windowSize: number;
+}
+
+/**
  * Complete Sparn configuration.
  */
 export interface SparnConfig {
@@ -65,6 +94,8 @@ export interface SparnConfig {
   ui: UIConfig;
   /** Auto-consolidation interval in hours, or null for manual */
   autoConsolidate: number | null;
+  /** Real-time optimization settings */
+  realtime: RealtimeConfig;
 }
 
 /**
@@ -90,4 +121,14 @@ export const DEFAULT_CONFIG: SparnConfig = {
     verbose: false,
   },
   autoConsolidate: null,
+  realtime: {
+    tokenBudget: 50000,
+    autoOptimizeThreshold: 80000,
+    watchPatterns: ['**/*.jsonl'],
+    pidFile: '.sparn/daemon.pid',
+    logFile: '.sparn/daemon.log',
+    debounceMs: 5000,
+    incremental: true,
+    windowSize: 500,
+  },
 };

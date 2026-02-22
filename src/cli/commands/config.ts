@@ -112,6 +112,54 @@ const CONFIG_SCHEMA: Record<
     errorMessage: 'autoConsolidate must be a positive number (hours) or null',
     parse: (v) => (v === 'null' ? null : Number.parseFloat(v)),
   },
+  'realtime.tokenBudget': {
+    path: ['realtime', 'tokenBudget'],
+    validate: (v) => typeof v === 'number' && v > 0,
+    errorMessage: 'tokenBudget must be a positive number',
+    parse: (v) => Number.parseInt(v, 10),
+  },
+  'realtime.autoOptimizeThreshold': {
+    path: ['realtime', 'autoOptimizeThreshold'],
+    validate: (v) => typeof v === 'number' && v > 0,
+    errorMessage: 'autoOptimizeThreshold must be a positive number',
+    parse: (v) => Number.parseInt(v, 10),
+  },
+  'realtime.watchPatterns': {
+    path: ['realtime', 'watchPatterns'],
+    validate: (v) => Array.isArray(v) && v.every((p) => typeof p === 'string'),
+    errorMessage: 'watchPatterns must be an array of strings',
+    parse: (v) => v.split(',').map((p) => p.trim()),
+  },
+  'realtime.pidFile': {
+    path: ['realtime', 'pidFile'],
+    validate: (v) => typeof v === 'string' && v.length > 0,
+    errorMessage: 'pidFile must be a non-empty string',
+    parse: (v) => v,
+  },
+  'realtime.logFile': {
+    path: ['realtime', 'logFile'],
+    validate: (v) => typeof v === 'string' && v.length > 0,
+    errorMessage: 'logFile must be a non-empty string',
+    parse: (v) => v,
+  },
+  'realtime.debounceMs': {
+    path: ['realtime', 'debounceMs'],
+    validate: (v) => typeof v === 'number' && v >= 0,
+    errorMessage: 'debounceMs must be a non-negative number',
+    parse: (v) => Number.parseInt(v, 10),
+  },
+  'realtime.incremental': {
+    path: ['realtime', 'incremental'],
+    validate: (v) => typeof v === 'boolean',
+    errorMessage: 'incremental must be true or false',
+    parse: (v) => v === 'true',
+  },
+  'realtime.windowSize': {
+    path: ['realtime', 'windowSize'],
+    validate: (v) => typeof v === 'number' && v > 0,
+    errorMessage: 'windowSize must be a positive number',
+    parse: (v) => Number.parseInt(v, 10),
+  },
 };
 
 /**

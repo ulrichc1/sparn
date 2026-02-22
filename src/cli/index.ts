@@ -562,6 +562,151 @@ The config file is located at .sparn/config.yaml
     }
   });
 
+// Daemon command
+program
+  .command('daemon <subcommand>')
+  .description('Manage real-time optimization daemon')
+  .addHelpText(
+    'after',
+    `
+Subcommands:
+  start                                 # Start daemon
+  stop                                  # Stop daemon
+  status                                # Check daemon status
+
+Examples:
+  $ sparn daemon start                  # Start watching Claude Code sessions
+  $ sparn daemon stop                   # Stop daemon
+  $ sparn daemon status                 # Check if daemon is running
+
+The daemon watches ~/.claude/projects/**/*.jsonl and automatically
+optimizes contexts when they exceed the configured threshold.
+`,
+  )
+  .action(async (subcommand) => {
+    // Lazy-load dependencies
+    const { load: parseYAML } = await import('js-yaml');
+    const { createDaemonCommand } = await import('../daemon/daemon-process.js');
+    const { neuralCyan, errorRed } = await import('./ui/colors.js');
+
+    try {
+      // Load config
+      const configPath = resolve(process.cwd(), '.sparn/config.yaml');
+      const configYAML = readFileSync(configPath, 'utf-8');
+      // biome-ignore lint/suspicious/noExplicitAny: parseYAML returns unknown, need to cast
+      const config = parseYAML(configYAML) as any;
+
+      const daemon = createDaemonCommand();
+
+      switch (subcommand) {
+        case 'start': {
+          const result = await daemon.start(config);
+          if (result.success) {
+            console.log(neuralCyan(`\n✓ ${result.message}\n`));
+          } else {
+            console.error(errorRed(`\n✗ ${result.message}\n`));
+            process.exit(1);
+          }
+          break;
+        }
+
+        case 'stop': {
+          const result = await daemon.stop(config);
+          if (result.success) {
+            console.log(neuralCyan(`\n✓ ${result.message}\n`));
+          } else {
+            console.error(errorRed(`\n✗ ${result.message}\n`));
+            process.exit(1);
+          }
+          break;
+        }
+
+        case 'status': {
+          const result = await daemon.status(config);
+          if (result.running) {
+            console.log(neuralCyan(`\n✓ ${result.message}`));
+            if (result.sessionsWatched !== undefined) {
+              console.log(`  Sessions watched: ${result.sessionsWatched}`);
+            }
+            if (result.tokensSaved !== undefined) {
+              console.log(`  Tokens saved: ${result.tokensSaved.toLocaleString()}`);
+            }
+            console.log();
+          } else {
+            console.log(errorRed(`\n✗ ${result.message}\n`));
+          }
+          break;
+        }
+
+        default:
+          console.error(errorRed(`\nUnknown subcommand: ${subcommand}\n`));
+          console.error('Valid subcommands: start, stop, status\n');
+          process.exit(1);
+      }
+    } catch (error) {
+      console.error(errorRed('Error:'), error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    }
+  });
+
+// Hooks command
+program
+  .command('hooks <subcommand>')
+  .description('Manage Claude Code hook integration')
+  .option('--global', 'Install hooks globally (for all projects)')
+  .addHelpText(
+    'after',
+    `
+Subcommands:
+  install                               # Install hooks
+  uninstall                             # Uninstall hooks
+  status                                # Check hook status
+
+Examples:
+  $ sparn hooks install                 # Install hooks for current project
+  $ sparn hooks install --global        # Install hooks globally
+  $ sparn hooks uninstall               # Uninstall hooks
+  $ sparn hooks status                  # Check if hooks are active
+
+Hooks automatically optimize context before each Claude Code prompt
+and compress verbose tool results after execution.
+`,
+  )
+  .action(async (subcommand, options) => {
+    // Lazy-load dependencies
+    const { hooksCommand } = await import('./commands/hooks.js');
+    const { neuralCyan, errorRed } = await import('./ui/colors.js');
+
+    try {
+      const result = await hooksCommand({
+        subcommand: subcommand as 'install' | 'uninstall' | 'status',
+        global: options.global || false,
+      });
+
+      if (result.success) {
+        console.log(neuralCyan(`\n✓ ${result.message}`));
+
+        if (result.hookPaths) {
+          console.log('\nHook paths:');
+          console.log(`  pre-prompt: ${result.hookPaths.prePrompt}`);
+          console.log(`  post-tool-result: ${result.hookPaths.postToolResult}`);
+        }
+
+        console.log();
+      } else {
+        console.error(errorRed(`\n✗ ${result.message}`));
+        if (result.error) {
+          console.error(`  ${result.error}`);
+        }
+        console.log();
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(errorRed('Error:'), error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    }
+  });
+
 // Show banner on version
 program.on('option:version', () => {
   console.log(getBanner(VERSION));

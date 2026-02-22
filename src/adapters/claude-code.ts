@@ -5,7 +5,6 @@
  * Implements the same AgentAdapter interface as GenericAdapter but with Claude-specific tuning.
  */
 
-import { randomUUID } from 'node:crypto';
 import { createBTSPEmbedder } from '../core/btsp-embedder.js';
 import { createConfidenceStates } from '../core/confidence-states.js';
 import { createEngramScorer } from '../core/engram-scorer.js';
@@ -13,8 +12,7 @@ import type { KVMemory } from '../core/kv-memory.js';
 import { createSparsePruner } from '../core/sparse-pruner.js';
 import type { AgentAdapter, OptimizationResult, OptimizeOptions } from '../types/adapter.js';
 import type { SparnConfig } from '../types/config.js';
-import type { MemoryEntry } from '../types/memory.js';
-import { hashContent } from '../utils/hash.js';
+import { parseClaudeCodeContext } from '../utils/context-parser.js';
 import { estimateTokens } from '../utils/tokenizer.js';
 
 /**
@@ -188,108 +186,5 @@ export function createClaudeCodeAdapter(memory: KVMemory, config: SparnConfig): 
 
   return {
     optimize,
-  };
-}
-
-/**
- * Parse Claude Code context into memory entries
- * Handles conversation turns, tool uses, and results
- * @param context - Raw context string
- * @returns Array of memory entries
- */
-function parseClaudeCodeContext(context: string): MemoryEntry[] {
-  const entries: MemoryEntry[] = [];
-  const now = Date.now();
-
-  // Split by conversation turns and tool boundaries
-  const lines = context.split('\n');
-  let currentBlock: string[] = [];
-  let blockType: 'conversation' | 'tool' | 'result' | 'other' = 'other';
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    // Detect conversation turns
-    if (trimmed.startsWith('User:') || trimmed.startsWith('Assistant:')) {
-      if (currentBlock.length > 0) {
-        entries.push(createEntry(currentBlock.join('\n'), blockType, now));
-        currentBlock = [];
-      }
-      blockType = 'conversation';
-      currentBlock.push(line);
-    }
-    // Detect tool calls
-    else if (
-      trimmed.includes('<function_calls>') ||
-      trimmed.includes('<invoke>') ||
-      trimmed.includes('<tool_use>')
-    ) {
-      if (currentBlock.length > 0) {
-        entries.push(createEntry(currentBlock.join('\n'), blockType, now));
-        currentBlock = [];
-      }
-      blockType = 'tool';
-      currentBlock.push(line);
-    }
-    // Detect tool results
-    else if (trimmed.includes('<function_results>') || trimmed.includes('</function_results>')) {
-      if (currentBlock.length > 0 && blockType !== 'result') {
-        entries.push(createEntry(currentBlock.join('\n'), blockType, now));
-        currentBlock = [];
-      }
-      blockType = 'result';
-      currentBlock.push(line);
-    }
-    // Continue current block
-    else if (currentBlock.length > 0) {
-      currentBlock.push(line);
-    }
-    // Start new block if line has content
-    else if (trimmed.length > 0) {
-      currentBlock.push(line);
-      blockType = 'other';
-    }
-  }
-
-  // Add final block
-  if (currentBlock.length > 0) {
-    entries.push(createEntry(currentBlock.join('\n'), blockType, now));
-  }
-
-  return entries.filter((e) => e.content.trim().length > 0);
-}
-
-/**
- * Create a memory entry from a content block
- * @param content - Block content
- * @param type - Block type
- * @param baseTime - Base timestamp
- * @returns Memory entry
- */
-function createEntry(
-  content: string,
-  type: 'conversation' | 'tool' | 'result' | 'other',
-  baseTime: number,
-): MemoryEntry {
-  const tags: string[] = [type];
-
-  // Assign initial score based on type
-  let initialScore = 0.5;
-  if (type === 'conversation') initialScore = 0.8; // Prioritize conversation
-  if (type === 'tool') initialScore = 0.7; // Tool calls are important
-  if (type === 'result') initialScore = 0.4; // Results can be verbose
-
-  return {
-    id: randomUUID(),
-    content,
-    hash: hashContent(content),
-    timestamp: baseTime,
-    score: initialScore,
-    state: initialScore > 0.7 ? 'active' : initialScore > 0.3 ? 'ready' : 'silent',
-    ttl: 24 * 3600, // 24 hours default
-    accessCount: 0,
-    tags,
-    metadata: { type },
-    isBTSP: false,
   };
 }

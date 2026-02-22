@@ -6,9 +6,9 @@
 
 > 🧠 Neuroscience-inspired context optimization for AI coding agents
 
-**Status**: ✅ **Production Ready** - All Core Features Complete
+**Status**: ✅ **Production Ready** - All Core Features Complete + Real-Time Optimization
 
-**Version**: 1.0.0
+**Version**: 1.1.0
 
 ---
 
@@ -38,10 +38,17 @@ Sparn is an npm CLI package that applies 6 neuroscience principles to intelligen
   - GenericAdapter + ClaudeCodeAdapter (Agent-Agnostic)
   - SleepCompressor (Sleep Replay)
 - ✅ **Context Optimization** - 60-90% token reduction pipeline
-- ✅ **CLI Commands** - init, optimize, stats, relay, consolidate, config
+- ✅ **Real-Time Optimization** (NEW!) - Always-on background daemon and hooks
+  - Background daemon with auto-optimization at 80K token threshold
+  - Claude Code hooks (pre-prompt & post-tool-result)
+  - Incremental optimization with <50ms delta processing
+  - Budget-aware pruning targeting specific token counts
+  - Tool output compression (npm, docker, tests, git diffs)
+- ✅ **CLI Commands** - init, optimize, stats, relay, consolidate, config, daemon, hooks
 - ✅ **Programmatic API** - Full TypeScript support, JSDoc, standalone modules
 - ✅ **Database** - SQLite with dual index/value tables, corruption detection
 - ✅ **Configuration** - YAML config with runtime modification
+- ✅ **Metrics & Telemetry** - P50/P95/P99 latency tracking, cache hit rates, token savings
 
 ### ✨ Polish & UX
 - ✨ **Progress Indicators** - Real-time ora spinners for all long operations
@@ -52,10 +59,10 @@ Sparn is an npm CLI package that applies 6 neuroscience principles to intelligen
 - ✨ **Lazy Loading** - Fast startup (<200ms for --help/--version)
 
 ### 📊 Quality & CI/CD
-- 📊 **96 Tests** - 51 unit + 45 integration tests, all passing
-- 📊 **Benchmarks** - Token reduction, processing speed, memory usage
+- 📊 **176 Tests** - Comprehensive unit + integration test coverage, all passing
+- 📊 **Performance Benchmarks** - Validates <50ms incremental optimization target
 - 📊 **CI Pipeline** - GitHub Actions with cross-platform tests (Ubuntu, macOS, Windows)
-- 📊 **Documentation** - NEUROSCIENCE.md, CONTRIBUTING.md, comprehensive README
+- 📊 **Documentation** - NEUROSCIENCE.md, CONTRIBUTING.md, CHANGELOG.md, comprehensive README
 - 📊 **NPM Ready** - Package validated with publish --dry-run
 
 ---

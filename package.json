@@ -1,6 +1,6 @@
 {
   "name": "@ulrichc1/sparn",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "type": "module",
   "description": "Neuroscience-inspired context optimization for AI coding agents",
   "main": "dist/index.cjs",
@@ -28,6 +28,7 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
+    "bench": "vitest bench",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",
