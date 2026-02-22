@@ -5,10 +5,9 @@
  */
 
 import { spawn } from 'node:child_process';
-import { mkdir, rm, writeFile, access } from 'node:fs/promises';
-import { join } from 'node:path';
+import { access, mkdir, rm, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { dirname } from 'node:path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -132,13 +131,21 @@ async function main() {
 
     // Test 4: Config get
     await runTest('sparn config get', async () => {
-      const result = await runCommand('node', [cliPath, 'config', 'get', 'pruning.threshold'], testDir);
+      const result = await runCommand(
+        'node',
+        [cliPath, 'config', 'get', 'pruning.threshold'],
+        testDir,
+      );
       return result.success;
     });
 
     // Test 5: Config set
     await runTest('sparn config set', async () => {
-      const result = await runCommand('node', [cliPath, 'config', 'set', 'pruning.threshold', '10'], testDir);
+      const result = await runCommand(
+        'node',
+        [cliPath, 'config', 'set', 'pruning.threshold', '10'],
+        testDir,
+      );
       return result.success;
     });
 
@@ -155,7 +162,7 @@ Sample context line 4`;
       const result = await runCommand(
         'node',
         [cliPath, 'optimize', '--input', 'test-context.txt', '--output', 'optimized.txt'],
-        testDir
+        testDir,
       );
       return result.success;
     });
@@ -200,7 +207,6 @@ Sample context line 4`;
       const result = await runCommand('node', [cliPath, '--version'], testDir);
       return result.success;
     });
-
   } finally {
     // Cleanup
     try {

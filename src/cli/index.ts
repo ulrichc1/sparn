@@ -6,9 +6,18 @@
  */
 
 import { spawn } from 'node:child_process';
-import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { getBanner } from './ui/banner.js';
+
+// Get package.json version
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const pkgPath = join(__dirname, '../../package.json');
+const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+const VERSION = pkg.version;
 
 // Lazy-loaded imports (loaded only when commands are executed):
 // - createKVMemory (heavy: better-sqlite3)
@@ -92,7 +101,7 @@ const program = new Command();
 program
   .name('sparn')
   .description('Neuroscience-inspired context optimization for AI coding agents')
-  .version('0.1.0', '-v, --version', 'Output the current version')
+  .version(VERSION, '-v, --version', 'Output the current version')
   .helpOption('-h, --help', 'Display help for command');
 
 // Init command
@@ -545,7 +554,7 @@ The config file is located at .sparn/config.yaml
 
 // Show banner on version
 program.on('option:version', () => {
-  console.log(getBanner('0.1.0'));
+  console.log(getBanner(VERSION));
   process.exit(0);
 });
 

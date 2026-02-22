@@ -144,7 +144,7 @@ autoConsolidate: null
     expect(result.success).toBe(true);
     expect(result.json).toBeDefined();
 
-    const parsed = JSON.parse(result.json!);
+    const parsed = JSON.parse(result.json ?? '{}');
     expect(parsed.key).toBe('pruning.threshold');
     expect(parsed.value).toBe(5);
   });
@@ -158,7 +158,7 @@ autoConsolidate: null
     expect(result.success).toBe(true);
     expect(result.json).toBeDefined();
 
-    const parsed = JSON.parse(result.json!);
+    const parsed = JSON.parse(result.json ?? '{}');
     expect(parsed.agent).toBe('claude-code');
     expect(parsed.pruning.threshold).toBe(5);
   });

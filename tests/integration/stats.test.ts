@@ -137,7 +137,7 @@ describe('stats command integration', () => {
     expect(typeof result.json).toBe('string');
 
     // Verify valid JSON
-    const parsed = JSON.parse(result.json!);
+    const parsed = JSON.parse(result.json ?? '{}');
     expect(parsed).toHaveProperty('totalCommands');
     expect(parsed).toHaveProperty('totalTokensSaved');
     expect(parsed).toHaveProperty('averageReduction');

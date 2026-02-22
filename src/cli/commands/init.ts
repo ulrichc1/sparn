@@ -3,13 +3,22 @@
  * Creates .sparn/ directory with config and database.
  */
 
+import { readFileSync } from 'node:fs';
 import { access, mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { dump as dumpYAML } from 'js-yaml';
 import { createKVMemory } from '../../core/kv-memory.js';
 import { DEFAULT_CONFIG } from '../../types/config.js';
 import { getBanner } from '../ui/banner.js';
 import { brainPink, dim, neuralCyan } from '../ui/colors.js';
+
+// Get package.json version
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const pkgPath = join(__dirname, '../../../package.json');
+const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+const VERSION = pkg.version;
 
 /**
  * Options for init command.
@@ -96,7 +105,7 @@ ${configYAML}`;
  * @param result - Init result
  */
 export function displayInitSuccess(result: InitResult): void {
-  console.log(getBanner('0.1.0'));
+  console.log(getBanner(VERSION));
 
   console.log(`\n${brainPink('━'.repeat(60))}`);
   console.log(brainPink('  🧠 Sparn Initialized Successfully!'));
