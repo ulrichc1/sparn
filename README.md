@@ -120,6 +120,31 @@ Before/after token savings with progress bars and celebration messages:
 
 ---
 
+## 🤖 Claude Code Integration
+
+**NEW!** Sparn now integrates with Claude Code CLI for real-time context optimization!
+
+### Quick Start with Claude Code
+
+1. **Install the skill**:
+   ```bash
+   # Skill is pre-installed at ~/.claude/skills/sparn/
+   # Just ensure Sparn is installed globally
+   npm install -g @ulrichc1/sparn
+   ```
+
+2. **Use in Claude Code**:
+   ```bash
+   claude-code
+   > /sparn.go        # Start real-time optimization
+   > /sparn.optimize  # Manual optimization
+   > /sparn.stats     # View statistics
+   ```
+
+**See** [`CLAUDE-CODE-SKILL.md`](./CLAUDE-CODE-SKILL.md) **for complete documentation.**
+
+---
+
 ## Installation
 
 ### Global CLI Install
