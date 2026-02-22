@@ -1,5 +1,5 @@
 {
-  "name": "sparn",
+  "name": "@ulrichc1/sparn",
   "version": "1.0.0",
   "type": "module",
   "description": "Neuroscience-inspired context optimization for AI coding agents",
