@@ -20,10 +20,10 @@ function getVersion(): string {
     const pkg = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf-8'));
     return pkg.version;
   } catch {
-    // Fallback: calculate from module location
+    // Fallback: calculate from module location (after bundling: dist/cli/index.js)
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
-    const pkg = JSON.parse(readFileSync(join(__dirname, '../../../package.json'), 'utf-8'));
+    const pkg = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf-8'));
     return pkg.version;
   }
 }
