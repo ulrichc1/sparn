@@ -51,6 +51,9 @@ export type {
   SessionWatcherConfig,
 } from './daemon/session-watcher.js';
 export { createSessionWatcher } from './daemon/session-watcher.js';
+// MCP
+export type { SparnMcpServerOptions } from './mcp/server.js';
+export { createSparnMcpServer } from './mcp/server.js';
 export type {
   AgentAdapter,
   OptimizationResult,

@@ -6,7 +6,9 @@
  */
 
 import { appendFileSync, existsSync, unlinkSync } from 'node:fs';
+import { createKVMemory } from '../core/kv-memory.js';
 import type { SparnConfig } from '../types/config.js';
+import { createConsolidationScheduler } from './consolidation-scheduler.js';
 import { createSessionWatcher } from './session-watcher.js';
 
 // Parse config from environment
@@ -49,8 +51,18 @@ function cleanup(): void {
     }
   }
 
+  // Stop scheduler
+  if (scheduler) {
+    scheduler.stop();
+  }
+
   // Stop watcher
   watcher.stop();
+
+  // Close memory connection
+  if (memory) {
+    void memory.close();
+  }
 
   process.exit(0);
 }
@@ -71,6 +83,11 @@ process.on('unhandledRejection', (reason) => {
   cleanup();
 });
 
+// Create memory instance for consolidation scheduler
+// Using a default path - could be made configurable in future
+let memory: Awaited<ReturnType<typeof createKVMemory>> | null = null;
+let scheduler: ReturnType<typeof createConsolidationScheduler> | null = null;
+
 // Create and start session watcher
 log('Daemon starting');
 
@@ -89,8 +106,35 @@ const watcher = createSessionWatcher({
 // Start watching
 watcher
   .start()
-  .then(() => {
+  .then(async () => {
     log('Daemon ready - watching Claude Code sessions');
+
+    // Initialize consolidation scheduler if enabled
+    if (
+      config.realtime.consolidationInterval !== null &&
+      config.realtime.consolidationInterval > 0
+    ) {
+      try {
+        // Create memory instance
+        memory = await createKVMemory('.sparn/memory.db');
+
+        // Create and start scheduler
+        scheduler = createConsolidationScheduler({
+          memory,
+          config,
+          logFile,
+        });
+
+        scheduler.start();
+        log(
+          `Consolidation scheduler started (interval: ${config.realtime.consolidationInterval}h)`,
+        );
+      } catch (error) {
+        log(
+          `Failed to start consolidation scheduler: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
   })
   .catch((error) => {
     log(`Failed to start: ${error.message}`);

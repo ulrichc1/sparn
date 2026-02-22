@@ -81,6 +81,9 @@ export interface RealtimeConfig {
 
   /** Sliding window size for context entries (default: 500) */
   windowSize: number;
+
+  /** Consolidation interval in hours, or null for disabled (default: null) */
+  consolidationInterval: number | null;
 }
 
 /**
@@ -130,5 +133,6 @@ export const DEFAULT_CONFIG: SparnConfig = {
     debounceMs: 5000,
     incremental: true,
     windowSize: 500,
+    consolidationInterval: null,
   },
 };

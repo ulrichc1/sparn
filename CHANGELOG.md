@@ -5,6 +5,75 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-23
+
+### 🚀 Major Features Added
+
+#### MCP Server Integration
+- **Model Context Protocol (MCP) Server**: Expose Sparn as MCP tools for Claude Desktop and other MCP clients
+  - Three MCP tools: `sparn_optimize`, `sparn_stats`, `sparn_consolidate`
+  - Full integration with `@modelcontextprotocol/sdk` v1.26.0
+  - Standalone server mode: `npm run mcp:server`
+  - Programmatic API: `createSparnMcpServer(options)`
+  - Comprehensive documentation in `docs/MCP.md`
+  - Support for Claude Desktop, VS Code, Cursor, and custom clients
+  - Environment variable support for custom database paths
+  - 17 integration tests covering all MCP functionality
+
+#### CLI Interactive Mode
+- **Conversational Interface**: Beautiful terminal UI for exploration and configuration
+  - New `sparn interactive` (alias: `sparn i`) command
+  - Configuration wizard with guided prompts for all settings (pruning, decay, states, realtime, UI)
+  - Optimization preview with file browsing and confirmation
+  - Stats dashboard with multiple views (optimization history, realtime metrics, memory stats)
+  - Interactive memory consolidation with confirmation prompts
+  - Quick actions menu (reset stats, export config, test optimization)
+  - Branded terminal UI with neural cyan, synapse violet, and brain pink colors
+  - 22 comprehensive integration tests
+
+#### Automated Consolidation Scheduler
+- **Periodic Memory Consolidation**: Background scheduler for automatic cleanup
+  - New `realtime.consolidationInterval` config option (in hours, null = disabled)
+  - Automatically runs consolidation at scheduled intervals when daemon is running
+  - Full integration with existing consolidate command
+  - Detailed logging to daemon log file with timestamps
+  - Metrics tracking for each consolidation run (entries removed, compression ratio)
+  - Status API shows next scheduled consolidation time
+  - 17 unit tests with real-time interval testing
+
+### ✨ Enhancements
+
+- **Dependencies Added**:
+  - `@modelcontextprotocol/sdk` ^1.26.0 for MCP server functionality
+  - `zod` ^3.25.76 for schema validation (MCP requirement)
+  - `@inquirer/prompts` ^7.10.1 for interactive terminal UI
+
+### 📝 Technical Details
+
+**New Files** (9):
+- `src/mcp/server.ts` - Core MCP server implementation with tool definitions
+- `src/mcp/index.ts` - MCP server entry point with stdio transport
+- `src/cli/commands/interactive.ts` - Full interactive mode implementation (596 lines)
+- `src/daemon/consolidation-scheduler.ts` - Scheduler module with setInterval
+- `docs/MCP.md` - Comprehensive MCP configuration guide
+- `tests/integration/mcp.test.ts` - 17 MCP integration tests
+- `tests/integration/interactive.test.ts` - 22 interactive mode tests
+- `tests/unit/consolidation-scheduler.test.ts` - 17 scheduler tests
+
+**Modified Files** (5):
+- `src/types/config.ts` - Added `consolidationInterval` to RealtimeConfig
+- `src/daemon/index.ts` - Integrated consolidation scheduler lifecycle
+- `src/index.ts` - Exported MCP server API
+- `tsup.config.ts` - Added MCP entry point
+- `package.json` - Added mcp:server script and mcp keyword
+
+### 📊 Test Coverage
+
+- **Total Tests**: 230 passing, 2 skipped (232 total)
+- **Test Files**: 24 passing
+- **New Test Coverage**: 56 new tests for MCP, interactive mode, and scheduler
+- All tests pass, typecheck clean, lint clean, build successful
+
 ## [1.1.1] - 2026-02-23
 
 ### 🐛 Bug Fixes

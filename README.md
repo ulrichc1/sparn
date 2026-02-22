@@ -6,9 +6,9 @@
 
 > 🧠 Neuroscience-inspired context optimization for AI coding agents
 
-**Status**: ✅ **Production Ready** - All Core Features Complete + Real-Time Optimization
+**Status**: ✅ **Production Ready** - Full Feature Set with MCP Server + Interactive Mode
 
-**Version**: 1.1.1
+**Version**: 1.2.0
 
 ---
 
@@ -38,14 +38,26 @@ Sparn is an npm CLI package that applies 6 neuroscience principles to intelligen
   - GenericAdapter + ClaudeCodeAdapter (Agent-Agnostic)
   - SleepCompressor (Sleep Replay)
 - ✅ **Context Optimization** - 60-90% token reduction pipeline
-- ✅ **Real-Time Optimization** (NEW!) - Always-on background daemon and hooks
+- ✅ **Real-Time Optimization** - Always-on background daemon and hooks
   - Background daemon with auto-optimization at 80K token threshold
+  - Automated consolidation scheduler (configurable intervals)
   - Claude Code hooks (pre-prompt & post-tool-result)
   - Incremental optimization with <50ms delta processing
   - Budget-aware pruning targeting specific token counts
   - Tool output compression (npm, docker, tests, git diffs)
-- ✅ **CLI Commands** - init, optimize, stats, relay, consolidate, config, daemon, hooks
-- ✅ **Programmatic API** - Full TypeScript support, JSDoc, standalone modules
+- ✅ **MCP Server** (NEW!) - Model Context Protocol integration
+  - Expose Sparn as MCP tools for Claude Desktop and other MCP clients
+  - Three tools: sparn_optimize, sparn_stats, sparn_consolidate
+  - Full SDK integration with stdio transport
+  - Comprehensive configuration guide
+- ✅ **Interactive Mode** (NEW!) - Conversational CLI interface
+  - Configuration wizard with guided prompts
+  - Optimization preview with file browsing
+  - Stats dashboard with multiple views
+  - Memory consolidation with confirmation
+  - Quick actions and shortcuts
+- ✅ **CLI Commands** - init, optimize, stats, relay, consolidate, config, daemon, hooks, interactive
+- ✅ **Programmatic API** - Full TypeScript support, JSDoc, standalone modules, MCP server factory
 - ✅ **Database** - SQLite with dual index/value tables, corruption detection
 - ✅ **Configuration** - YAML config with runtime modification
 - ✅ **Metrics & Telemetry** - P50/P95/P99 latency tracking, cache hit rates, token savings
@@ -59,10 +71,10 @@ Sparn is an npm CLI package that applies 6 neuroscience principles to intelligen
 - ✨ **Lazy Loading** - Fast startup (<200ms for --help/--version)
 
 ### 📊 Quality & CI/CD
-- 📊 **176 Tests** - Comprehensive unit + integration test coverage, all passing
+- 📊 **230 Tests** - Comprehensive unit + integration test coverage, 230 passing
 - 📊 **Performance Benchmarks** - Validates <50ms incremental optimization target
 - 📊 **CI Pipeline** - GitHub Actions with cross-platform tests (Ubuntu, macOS, Windows)
-- 📊 **Documentation** - NEUROSCIENCE.md, CONTRIBUTING.md, CHANGELOG.md, comprehensive README
+- 📊 **Documentation** - NEUROSCIENCE.md, CONTRIBUTING.md, CHANGELOG.md, MCP.md, comprehensive README
 - 📊 **NPM Ready** - Package validated with publish --dry-run
 
 ---
@@ -284,6 +296,39 @@ sparn config get pruning.threshold
 # Set value
 sparn config set pruning.threshold 10
 # Output: Config updated: pruning.threshold = 10
+```
+
+### 7. Interactive Mode (NEW!)
+
+Launch conversational interface for exploration and configuration:
+
+```bash
+sparn interactive
+# or short alias
+sparn i
+```
+
+**Features:**
+- **Configuration Wizard** - Guided prompts for all settings
+- **Optimization Preview** - Test optimization with file preview and confirmation
+- **Stats Dashboard** - Beautiful metrics display with multiple views
+- **Memory Consolidation** - Interactive cleanup with confirmation
+- **Quick Actions** - Common tasks and shortcuts
+
+**Output:**
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🧠 Sparn Interactive Mode
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Conversational configuration and exploration
+
+? What would you like to do?
+  ⚙️  Configure Settings
+  🔍 Optimize Preview
+  📊 Stats Dashboard
+  🧹 Memory Consolidation
+  🚀 Quick Actions
+❯ ❌ Exit
 ```
 
 ---

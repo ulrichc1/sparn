@@ -7,6 +7,7 @@ export default defineConfig({
     'daemon/index': 'src/daemon/index.ts',
     'hooks/pre-prompt': 'src/hooks/pre-prompt.ts',
     'hooks/post-tool-result': 'src/hooks/post-tool-result.ts',
+    'mcp/index': 'src/mcp/index.ts',
   },
   format: ['cjs', 'esm'],
   dts: true,

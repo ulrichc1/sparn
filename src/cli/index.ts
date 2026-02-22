@@ -707,6 +707,56 @@ and compress verbose tool results after execution.
     }
   });
 
+// Interactive command
+program
+  .command('interactive')
+  .alias('i')
+  .description('Launch interactive mode for configuration and exploration')
+  .addHelpText(
+    'after',
+    `
+Examples:
+  $ sparn interactive                   # Launch interactive mode
+  $ sparn i                             # Short alias
+
+Features:
+  • 📝 Configuration Wizard - Guided prompts for all settings
+  • 🔍 Optimization Preview - Test optimization with file preview
+  • 📊 Stats Dashboard - Beautiful metrics display
+  • 🧹 Memory Consolidation - Interactive cleanup
+  • 🚀 Quick Actions - Common tasks and shortcuts
+
+The interactive mode provides a conversational interface for exploring
+and configuring Sparn without memorizing CLI flags.
+`,
+  )
+  .action(async () => {
+    // Lazy-load dependencies
+    const { createKVMemory } = await import('../core/kv-memory.js');
+    const { interactiveCommand } = await import('./commands/interactive.js');
+    const { errorRed } = await import('./ui/colors.js');
+
+    try {
+      // Load memory
+      const dbPath = resolve(process.cwd(), '.sparn/memory.db');
+      const memory = await createKVMemory(dbPath);
+
+      // Config path
+      const configPath = resolve(process.cwd(), '.sparn/config.yaml');
+
+      // Run interactive mode
+      await interactiveCommand({
+        memory,
+        configPath,
+      });
+
+      await memory.close();
+    } catch (error) {
+      console.error(errorRed('Error:'), error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    }
+  });
+
 // Show banner on version
 program.on('option:version', () => {
   console.log(getBanner(VERSION));
