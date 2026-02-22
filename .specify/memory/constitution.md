@@ -1,4 +1,28 @@
+<!--
+SYNC IMPACT REPORT — Constitution Update 2026-02-22
+
+Version Change: [unversioned] → 1.0.0
+Rationale: Initial formal version baseline for existing constitution
+
+Modified Principles: None (formalization only)
+Added Sections:
+  - Governance section with version tracking
+  - Amendment procedure formalized
+Removed Sections: None
+
+Templates Status:
+  ✅ plan-template.md — Constitution Check section aligned with all 9 articles
+  ✅ spec-template.md — Requirements structure compatible with principles
+  ✅ tasks-template.md — TDD workflow matches Article III
+
+Follow-up TODOs: None
+
+Next Amendment: Increment MINOR version for new principles, PATCH for clarifications
+-->
+
 # Sparn — Project Constitution
+
+**Version**: 1.0.0 | **Ratified**: 2026-02-22 | **Last Amended**: 2026-02-22
 
 > Non-negotiable principles governing specification, planning, and implementation.
 
@@ -76,11 +100,35 @@ All CLI output follows the Direction Artistique:
 
 ---
 
-## Amendments
+## Governance
 
-Amendments to this constitution require:
-- Explicit documentation of the rationale for change
-- Review and approval by project maintainer (@ulrichc1)
-- Backwards compatibility assessment
+This constitution supersedes all other development practices, guides, and documentation. When conflicts arise between this constitution and other project documentation, the constitution takes precedence.
 
-*Last updated: 2026-02-22*
+### Amendment Procedure
+
+Amendments to this constitution MUST follow this procedure:
+
+1. **Proposal**: Document the proposed change with explicit rationale
+2. **Review**: Project maintainer (@ulrichc1) reviews for alignment with project vision
+3. **Impact Assessment**: Evaluate backwards compatibility and migration requirements
+4. **Approval**: Maintainer approval required before adoption
+5. **Version Update**: Increment version per semantic versioning rules below
+6. **Propagation**: Update all dependent templates and documentation
+
+### Versioning Policy
+
+Constitution version follows **semantic versioning** (MAJOR.MINOR.PATCH):
+
+- **MAJOR**: Backward-incompatible governance changes, principle removals, or fundamental redefinitions that invalidate prior work
+- **MINOR**: New principles added, sections materially expanded, or new mandatory requirements introduced
+- **PATCH**: Clarifications, wording improvements, typo fixes, or non-semantic refinements that do not change meaning
+
+### Compliance Review
+
+All pull requests, code reviews, and planning artifacts MUST verify compliance with this constitution. Violations MUST be justified in the "Complexity Tracking" section of plan.md with:
+
+- Which article is violated
+- Why the violation is necessary for this specific feature
+- What simpler alternatives were rejected and why
+
+Any unjustified complexity or principle violations MUST be rejected.

@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Sparn-specific
+.sparn/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary
+*.tmp
+.temp/
+
+# Internal development documents (not for public repo)
+*-SUMMARY.md
+PHASE*.md
+SECURITY-REVIEW.md
+PUBLISH-READY.md
+.gitignore-info.md
+GDPR-COMPLIANCE.md
+
+# Benchmark results (generated files)
+benchmarks/results/
+
+# Claude Code session files
+.claude/

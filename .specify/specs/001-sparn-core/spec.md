@@ -130,10 +130,17 @@ Maps to: **Sparse Coding** — only 2-5% of neurons fire for any given stimulus.
 Maps to: **Engram Theory** — memories have physical traces that decay over time.
 
 - Assigns a decay score to each memory entry based on age and access frequency
-- Each entry has a TTL (time-to-live) that decreases over time
+- Each entry has a TTL (time-to-live) measured in hours (default: 24 hours)
 - Recently accessed entries get TTL refreshed (reinforcement)
 - Entries below score threshold are marked for pruning
 - Score formula: `score = baseRelevance * recencyBoost * accessFrequency * (1 - decay)`
+
+**Decay Details:**
+- TTL units: Hours (stored as integer seconds in database)
+- Decay formula: Exponential decay `decay = 1 - e^(-age/TTL)` where age is in hours
+- Default TTL: 24 hours (86400 seconds)
+- Decay threshold: 0.95 (entries with decay ≥ 0.95 are marked for pruning)
+- TTL refresh on access: Reset to default TTL value
 
 ### FR-3: KV Memory Store Module
 
@@ -146,16 +153,36 @@ Maps to: **Hippocampal Key-Value** — the hippocampus separates what to store f
 - Supports tags and metadata per entry
 - Compact operation removes orphaned indexes and expired entries
 
+**Memory Entry Structure:**
+- `id` (string): Unique identifier (UUID or auto-increment)
+- `content` (text): The actual memory content/context data
+- `hash` (string): SHA-256 hash of content for deduplication
+- `timestamp` (integer): Unix timestamp of creation
+- `score` (float): Current engram score (0.0-1.0)
+- `ttl` (integer): Time-to-live in seconds remaining
+- `state` (string): Confidence state ("silent" | "ready" | "active")
+- `accessCount` (integer): Number of times accessed/retrieved
+- `tags` (JSON array): User-defined tags for categorization
+- `metadata` (JSON object): Additional key-value pairs
+- `isBTSP` (boolean): Flag indicating one-shot learned entry
+
 ### FR-4: Confidence States Module
 
 Maps to: **Multi-State Synapses** — synapses exist in silent, ready, or active states.
 
 - Classifies each memory entry into one of three states:
-  - **Silent**: Low relevance, not included in context (but retained in store)
-  - **Ready**: Moderate relevance, included if space permits
-  - **Active**: High relevance, always included in context
+  - **Silent**: Low relevance (score < 0.3), not included in context (but retained in store)
+  - **Ready**: Moderate relevance (score 0.3-0.7), included if space permits
+  - **Active**: High relevance (score > 0.7), always included in context
 - State transitions based on access patterns and engram scores
 - State distribution is shown in stats output
+
+**State Transition Rules:**
+- Score ≤ 0.3: Transition to Silent
+- 0.3 < Score ≤ 0.7: Transition to Ready
+- Score > 0.7: Transition to Active
+- State recalculated after each access or consolidation cycle
+- BTSP-flagged entries start in Active state regardless of score
 
 ### FR-5: Sleep Compressor Module
 
@@ -193,12 +220,21 @@ Maps to: **Behavioral Time-Scale Synaptic Plasticity** — single-exposure learn
 - Each adapter implements a common interface: `optimize(context) → optimizedContext`
 - Adapter selection via `--agent` flag or `.sparn/config.yaml`
 
+**Context Format (v0.1):**
+- Input: Plain text (line-based), read from stdin or file
+- Output: Plain text (line-based), written to stdout or file
+- Each line treated as a potential memory entry candidate
+- Empty lines preserved for formatting
+- No special markup or structure required
+
 ---
 
 ## 4. Non-Functional Requirements
 
 ### Performance
 - Optimization of 100K tokens completes in under 500ms
+- Maximum supported context size: 500K tokens per optimization
+- Maximum database capacity: 10K memory entries (older entries auto-pruned)
 - SQLite operations (single read/write) complete in under 10ms
 - CLI startup time under 200ms
 - Memory usage under 100MB for typical workloads
@@ -249,6 +285,18 @@ Maps to: **Behavioral Time-Scale Synaptic Plasticity** — single-exposure learn
 - [ ] NEUROSCIENCE.md documents all 6 brain-to-code mappings
 - [ ] npm publish dry-run succeeds
 - [ ] CI pipeline (lint + typecheck + test + build) passes
+
+---
+
+## 7. Clarifications
+
+### Session 2026-02-22
+
+- Q: Memory Entry Data Structure - What fields does a memory entry contain? → A: Complete structure with `{ id, content, hash, timestamp, score, ttl, state, accessCount, tags, metadata, isBTSP }`
+- Q: Scalability & Performance Limits - What are the maximum context size and database capacity? → A: Max 500K tokens per optimization, max 10K entries in database
+- Q: Context Input/Output Format - What format is the context data? → A: Plain text only (line-based, universal compatibility)
+- Q: TTL Units and Decay Rate - What time units and decay formula? → A: Hours-based TTL with exponential decay, default 24 hours
+- Q: Confidence State Transition Thresholds - What score thresholds trigger state changes? → A: Active >0.7, Ready 0.3-0.7, Silent <0.3
 
 ---
 
