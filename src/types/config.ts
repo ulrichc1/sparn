@@ -61,7 +61,7 @@ export interface RealtimeConfig {
   /** Target token budget for optimized context (default: 50000) */
   tokenBudget: number;
 
-  /** Token threshold that triggers auto-optimization (default: 80000) */
+  /** Token threshold that triggers auto-optimization (default: 60000) */
   autoOptimizeThreshold: number;
 
   /** File patterns to watch for changes (default: ['**\/*.jsonl']) */
@@ -125,8 +125,8 @@ export const DEFAULT_CONFIG: SparnConfig = {
   },
   autoConsolidate: null,
   realtime: {
-    tokenBudget: 50000,
-    autoOptimizeThreshold: 80000,
+    tokenBudget: 40000,
+    autoOptimizeThreshold: 60000,
     watchPatterns: ['**/*.jsonl'],
     pidFile: '.sparn/daemon.pid',
     logFile: '.sparn/daemon.log',

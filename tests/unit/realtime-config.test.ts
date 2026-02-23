@@ -12,11 +12,11 @@ describe('Realtime Config', () => {
     });
 
     it('should have tokenBudget default', () => {
-      expect(DEFAULT_CONFIG.realtime.tokenBudget).toBe(50000);
+      expect(DEFAULT_CONFIG.realtime.tokenBudget).toBe(40000);
     });
 
     it('should have autoOptimizeThreshold default', () => {
-      expect(DEFAULT_CONFIG.realtime.autoOptimizeThreshold).toBe(80000);
+      expect(DEFAULT_CONFIG.realtime.autoOptimizeThreshold).toBe(60000);
     });
 
     it('should have watchPatterns default', () => {

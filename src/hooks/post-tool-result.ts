@@ -12,7 +12,21 @@
  * Falls through unmodified on error or if already small.
  */
 
+import { appendFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { estimateTokens } from '../utils/tokenizer.js';
+
+// Debug logging (optional, set via env var)
+const DEBUG = process.env['SPARN_DEBUG'] === 'true';
+const LOG_FILE = process.env['SPARN_LOG_FILE'] || join(homedir(), '.sparn-hook.log');
+
+function log(message: string): void {
+  if (DEBUG) {
+    const timestamp = new Date().toISOString();
+    appendFileSync(LOG_FILE, `[${timestamp}] [post-tool-result] ${message}\n`);
+  }
+}
 
 // Exit 0 wrapper for all errors
 function exitSuccess(output: string): void {
@@ -288,62 +302,101 @@ function compressTypescriptErrors(content: string): string {
  */
 function compressToolResult(input: string): string {
   const tokens = estimateTokens(input);
+  log(`Tool result tokens: ${tokens}`);
 
   // Only compress if over threshold
   if (tokens < COMPRESSION_THRESHOLD) {
+    log(`Under compression threshold (${tokens} < ${COMPRESSION_THRESHOLD}), passing through`);
     return input;
   }
 
+  log(`Over threshold! Compressing ${tokens} token tool result`);
+
   // Detect tool result type and compress accordingly
   if (TOOL_PATTERNS.fileRead.test(input)) {
+    log('Detected: File read');
     const match = input.match(TOOL_PATTERNS.fileRead);
     if (match?.[2]) {
       const content = match[2];
       const compressed = compressFileRead(content);
+      const afterTokens = estimateTokens(compressed);
+      log(`Compressed file read: ${tokens} → ${afterTokens} tokens`);
       return input.replace(content, compressed);
     }
   }
 
   if (TOOL_PATTERNS.grepResult.test(input)) {
+    log('Detected: Grep results');
     const match = input.match(TOOL_PATTERNS.grepResult);
     if (match?.[2]) {
       const matches = match[2];
       const compressed = compressGrepResults(matches);
+      const afterTokens = estimateTokens(compressed);
+      log(`Compressed grep: ${tokens} → ${afterTokens} tokens`);
       return input.replace(matches, compressed);
     }
   }
 
   if (TOOL_PATTERNS.gitDiff.test(input)) {
-    return compressGitDiff(input);
+    log('Detected: Git diff');
+    const compressed = compressGitDiff(input);
+    const afterTokens = estimateTokens(compressed);
+    log(`Compressed git diff: ${tokens} → ${afterTokens} tokens`);
+    return compressed;
   }
 
   if (TOOL_PATTERNS.buildOutput.test(input)) {
-    return compressBuildOutput(input);
+    log('Detected: Build output');
+    const compressed = compressBuildOutput(input);
+    const afterTokens = estimateTokens(compressed);
+    log(`Compressed build: ${tokens} → ${afterTokens} tokens`);
+    return compressed;
   }
 
   if (TOOL_PATTERNS.npmInstall.test(input)) {
-    return compressNpmInstall(input);
+    log('Detected: NPM install');
+    const compressed = compressNpmInstall(input);
+    const afterTokens = estimateTokens(compressed);
+    log(`Compressed npm: ${tokens} → ${afterTokens} tokens`);
+    return compressed;
   }
 
   if (TOOL_PATTERNS.dockerLogs.test(input)) {
-    return compressDockerLogs(input);
+    log('Detected: Docker logs');
+    const compressed = compressDockerLogs(input);
+    const afterTokens = estimateTokens(compressed);
+    log(`Compressed docker: ${tokens} → ${afterTokens} tokens`);
+    return compressed;
   }
 
   if (TOOL_PATTERNS.testResults.test(input)) {
-    return compressTestResults(input);
+    log('Detected: Test results');
+    const compressed = compressTestResults(input);
+    const afterTokens = estimateTokens(compressed);
+    log(`Compressed tests: ${tokens} → ${afterTokens} tokens`);
+    return compressed;
   }
 
   if (TOOL_PATTERNS.typescriptErrors.test(input)) {
-    return compressTypescriptErrors(input);
+    log('Detected: TypeScript errors');
+    const compressed = compressTypescriptErrors(input);
+    const afterTokens = estimateTokens(compressed);
+    log(`Compressed TS errors: ${tokens} → ${afterTokens} tokens`);
+    return compressed;
   }
 
   // Unknown type or no compression pattern matched
+  log('No pattern matched, applying generic compression');
   // Apply generic truncation as fallback
   const lines = input.split('\n');
   if (lines.length > 200) {
-    return compressFileRead(input, 100);
+    const compressed = compressFileRead(input, 100);
+    const afterTokens = estimateTokens(compressed);
+    log(`Generic compression: ${tokens} → ${afterTokens} tokens`);
+    return compressed;
   }
 
+  log('No compression needed');
   return input;
 }
 
@@ -361,8 +414,9 @@ async function main(): Promise<void> {
     const output = compressToolResult(input);
 
     exitSuccess(output);
-  } catch (_error) {
+  } catch (error) {
     // On any error, pass through original input
+    log(`Error in post-tool-result hook: ${error instanceof Error ? error.message : String(error)}`);
     const chunks: Buffer[] = [];
     for await (const chunk of process.stdin) {
       chunks.push(chunk);
