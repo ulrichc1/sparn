@@ -111,8 +111,8 @@ async function installHooks(
       ...(typeof settings['hooks'] === 'object' && settings['hooks'] !== null
         ? settings['hooks']
         : {}),
-      'prePrompt': `node ${prePromptPath}`,
-      'postToolResult': `node ${postToolResultPath}`,
+      prePrompt: `node ${prePromptPath}`,
+      postToolResult: `node ${postToolResultPath}`,
     };
 
     // Write settings.json
