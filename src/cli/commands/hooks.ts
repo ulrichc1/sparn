@@ -106,13 +106,13 @@ async function installHooks(
       }
     }
 
-    // Add hooks to settings
+    // Add hooks to settings (Claude Code 2.1+ uses camelCase)
     settings['hooks'] = {
       ...(typeof settings['hooks'] === 'object' && settings['hooks'] !== null
         ? settings['hooks']
         : {}),
-      'pre-prompt': `node ${prePromptPath}`,
-      'post-tool-result': `node ${postToolResultPath}`,
+      'prePrompt': `node ${prePromptPath}`,
+      'postToolResult': `node ${postToolResultPath}`,
     };
 
     // Write settings.json
@@ -155,11 +155,11 @@ async function uninstallHooks(settingsPath: string, global?: boolean): Promise<H
     const settingsJson = readFileSync(settingsPath, 'utf-8');
     const settings: Record<string, unknown> = JSON.parse(settingsJson);
 
-    // Remove hooks
+    // Remove hooks (Claude Code 2.1+ uses camelCase)
     if (settings['hooks'] && typeof settings['hooks'] === 'object' && settings['hooks'] !== null) {
       const hooks = settings['hooks'] as Record<string, unknown>;
-      delete hooks['pre-prompt'];
-      delete hooks['post-tool-result'];
+      delete hooks['prePrompt'];
+      delete hooks['postToolResult'];
 
       // Remove hooks object if empty
       if (Object.keys(hooks).length === 0) {
@@ -203,13 +203,13 @@ async function hooksStatus(settingsPath: string, global?: boolean): Promise<Hook
     const settingsJson = readFileSync(settingsPath, 'utf-8');
     const settings: Record<string, unknown> = JSON.parse(settingsJson);
 
-    // Check if hooks are installed
+    // Check if hooks are installed (Claude Code 2.1+ uses camelCase)
     const hasHooks =
       settings['hooks'] &&
       typeof settings['hooks'] === 'object' &&
       settings['hooks'] !== null &&
-      'pre-prompt' in settings['hooks'] &&
-      'post-tool-result' in settings['hooks'];
+      'prePrompt' in settings['hooks'] &&
+      'postToolResult' in settings['hooks'];
 
     if (!hasHooks) {
       return {
@@ -226,8 +226,8 @@ async function hooksStatus(settingsPath: string, global?: boolean): Promise<Hook
       message: global ? 'Global hooks active' : 'Project hooks active',
       installed: true,
       hookPaths: {
-        prePrompt: hooks['pre-prompt'] || '',
-        postToolResult: hooks['post-tool-result'] || '',
+        prePrompt: hooks['prePrompt'] || '',
+        postToolResult: hooks['postToolResult'] || '',
       },
     };
   } catch (error) {
