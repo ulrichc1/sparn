@@ -8,7 +8,7 @@
 
 **Status**: ✅ **Production Ready** - Full Feature Set with MCP Server + Interactive Mode
 
-**Version**: 1.2.0
+**Version**: 1.2.1
 
 ---
 
