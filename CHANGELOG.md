@@ -5,6 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-02-23
+
+### 🐛 Critical Bug Fixes
+
+- **Hook Config Resolution**: Fixed pre-prompt hook to check project directory (`.sparn/config.yaml`) BEFORE global config (`~/.sparn/config.yaml`)
+  - **Impact**: Hooks were failing silently because they couldn't find project-specific configs
+  - **Previous behavior**: Only checked `~/.sparn/config.yaml`, ignored project configs
+  - **New behavior**: Checks `./sparn/config.yaml` first, falls back to `~/.sparn/config.yaml`
+
+- **Debug Logging**: Added optional debug logging to troubleshoot hook issues
+  - Enable with: `export SPARN_DEBUG=true`
+  - Logs to: `~/.sparn-hook.log` (customizable via `SPARN_LOG_FILE`)
+  - Tracks: token counts, threshold checks, optimization results, compression strategies, errors
+  - Zero overhead when disabled (default)
+
+- **Lower Default Threshold**: Reduced `autoOptimizeThreshold` from 80K to 60K tokens
+  - **Reason**: Sessions were growing to 99K tokens without triggering optimization
+  - **New defaults**: `autoOptimizeThreshold: 60000`, `tokenBudget: 40000`
+  - **Impact**: More aggressive optimization, prevents sessions from approaching limits
+
+- **Better Error Messages**: Hooks now log why they skipped optimization
+  - "No config found, passing through"
+  - "Under threshold (45K < 60K), passing through"
+  - "Config parse error: [details]"
+
+### ✨ Enhancements
+
+- **Compression Logging**: post-tool-result hook now logs:
+  - Which compression strategy was used (file read, grep, git diff, tests, etc.)
+  - Token savings achieved (e.g., "Compressed file read: 8234 → 456 tokens")
+
+### 📝 Documentation
+
+- **New**: `docs/HOOK-DEBUGGING.md` - Comprehensive hook debugging guide
+  - How to enable debug logging
+  - Common issues & solutions
+  - Advanced debugging techniques
+  - Performance impact analysis
+  - Best practices
+
+### ⚙️ Technical Details
+
+**Files Changed**:
+- `src/hooks/pre-prompt.ts` - Config path resolution, debug logging
+- `src/hooks/post-tool-result.ts` - Debug logging, compression tracking
+- `src/types/config.ts` - Updated default thresholds
+- `tests/unit/realtime-config.test.ts` - Updated tests for new defaults
+
+**Breaking Changes**: None
+- Existing configs continue to work
+- Default threshold change only affects new installations
+
+**Testing**:
+- All 230 tests passing
+- Hook fixes validated with manual testing
+
 ## [1.2.1] - 2026-02-23
 
 ### 🐛 Bug Fixes
