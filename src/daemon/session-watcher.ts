@@ -6,7 +6,16 @@
  * Maintains per-session ContextPipeline instances.
  */
 
-import { type FSWatcher, readdirSync, statSync, watch } from 'node:fs';
+import {
+  existsSync,
+  type FSWatcher,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  watch,
+  writeFileSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { type ContextPipeline, createContextPipeline } from '../core/context-pipeline.js';
@@ -120,6 +129,8 @@ export function createSessionWatcher(config: SessionWatcherConfig): SessionWatch
         windowSize: realtime.windowSize,
         fullOptimizationInterval: 50, // Full re-optimization every 50 incremental updates
       });
+      // Restore persisted optimizer state if available
+      loadState(sessionId, pipeline);
       pipelines.set(sessionId, pipeline);
     }
 
@@ -200,7 +211,10 @@ export function createSessionWatcher(config: SessionWatcherConfig): SessionWatch
           const matches = realtime.watchPatterns.some((pattern) => {
             // Simple glob matching (supports **/*.jsonl)
             const regex = new RegExp(
-              pattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/\\\\]*').replace(/\./g, '\\.'),
+              pattern
+                .replace(/\./g, '\\.')
+                .replace(/\*\*/g, '.*')
+                .replace(/(?<!\.)(\*)/g, '[^/\\\\]*'),
             );
             return regex.test(fullPath);
           });
@@ -238,37 +252,40 @@ export function createSessionWatcher(config: SessionWatcherConfig): SessionWatch
   async function start(): Promise<void> {
     const projectsDir = getProjectsDir();
 
-    // Find all existing JSONL files
+    // Find all existing JSONL files (for initial metrics count)
     const jsonlFiles = findJsonlFiles(projectsDir);
 
-    // Watch each file's parent directory (fs.watch is directory-based)
-    const watchedDirs = new Set<string>();
+    // Use a single recursive watcher on the projects dir to avoid duplicate events
+    // from both per-dir watchers and the recursive watcher firing for the same file
+    try {
+      const projectsWatcher = watch(projectsDir, { recursive: true }, (_eventType, filename) => {
+        if (filename?.endsWith('.jsonl')) {
+          const fullPath = join(projectsDir, filename);
+          handleFileChange(fullPath);
+        }
+      });
 
-    for (const file of jsonlFiles) {
-      const dir = dirname(file);
+      watchers.push(projectsWatcher);
+    } catch {
+      // Recursive watch not supported (some Linux kernels) - fall back to per-dir
+      const watchedDirs = new Set<string>();
 
-      if (!watchedDirs.has(dir)) {
-        const watcher = watch(dir, { recursive: false }, (_eventType, filename) => {
-          if (filename?.endsWith('.jsonl')) {
-            const fullPath = join(dir, filename);
-            handleFileChange(fullPath);
-          }
-        });
+      for (const file of jsonlFiles) {
+        const dir = dirname(file);
 
-        watchers.push(watcher);
-        watchedDirs.add(dir);
+        if (!watchedDirs.has(dir)) {
+          const watcher = watch(dir, { recursive: false }, (_eventType, filename) => {
+            if (filename?.endsWith('.jsonl')) {
+              const fullPath = join(dir, filename);
+              handleFileChange(fullPath);
+            }
+          });
+
+          watchers.push(watcher);
+          watchedDirs.add(dir);
+        }
       }
     }
-
-    // Also watch projects directory for new subdirectories
-    const projectsWatcher = watch(projectsDir, { recursive: true }, (_eventType, filename) => {
-      if (filename?.endsWith('.jsonl')) {
-        const fullPath = join(projectsDir, filename);
-        handleFileChange(fullPath);
-      }
-    });
-
-    watchers.push(projectsWatcher);
 
     // Update daemon metrics
     getMetrics().updateDaemon({
@@ -278,7 +295,55 @@ export function createSessionWatcher(config: SessionWatcherConfig): SessionWatch
     });
   }
 
+  /**
+   * State persistence path
+   */
+  function getStatePath(): string {
+    return join(homedir(), '.sparn', 'optimizer-state.json');
+  }
+
+  /**
+   * Save optimizer state for all sessions
+   */
+  function saveState(): void {
+    try {
+      const stateMap: Record<string, string> = {};
+      for (const [sessionId, pipeline] of pipelines.entries()) {
+        stateMap[sessionId] = pipeline.serializeOptimizerState();
+      }
+      const statePath = getStatePath();
+      const dir = dirname(statePath);
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true });
+      }
+      writeFileSync(statePath, JSON.stringify(stateMap), 'utf-8');
+    } catch {
+      // Best-effort — fail silently
+    }
+  }
+
+  /**
+   * Load optimizer state for a session
+   */
+  function loadState(sessionId: string, pipeline: ReturnType<typeof createContextPipeline>): void {
+    try {
+      const statePath = getStatePath();
+      if (!existsSync(statePath)) return;
+      const raw = readFileSync(statePath, 'utf-8');
+      const stateMap = JSON.parse(raw) as Record<string, string>;
+      const sessionState = stateMap[sessionId];
+      if (sessionState) {
+        pipeline.deserializeOptimizerState(sessionState);
+      }
+    } catch {
+      // Best-effort — fail silently
+    }
+  }
+
   function stop(): void {
+    // Save optimizer state before stopping
+    saveState();
+
     // Close all watchers
     for (const watcher of watchers) {
       watcher.close();

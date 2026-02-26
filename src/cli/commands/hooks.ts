@@ -2,6 +2,8 @@
  * Hooks Command - Install/uninstall/status for Claude Code hooks
  *
  * Manages hook integration with Claude Code's settings.json file.
+ * Uses the correct Claude Code hook format:
+ *   hooks.EventName = [{ matcher?, hooks: [{ type, command, timeout? }] }]
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -10,9 +12,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export interface HooksCommandOptions {
-  /** Subcommand: install, uninstall, or status */
   subcommand: 'install' | 'uninstall' | 'status';
-  /** Install globally (for all projects) */
   global?: boolean;
 }
 
@@ -24,38 +24,62 @@ export interface HooksCommandResult {
   hookPaths?: {
     prePrompt: string;
     postToolResult: string;
+    stopDocsRefresh: string;
   };
 }
 
-/**
- * Execute the hooks command
- * @param options - Command options
- * @returns Hooks result
- */
+// Claude Code hook event names
+const PRE_PROMPT_EVENT = 'UserPromptSubmit';
+const POST_TOOL_EVENT = 'PostToolUse';
+const STOP_DOCS_EVENT = 'Stop';
+
+// Matcher for which tools trigger the post-tool hook
+const POST_TOOL_MATCHER = 'Bash|Read|Grep|Glob';
+
+// Marker to identify sparn-managed hooks
+const SPARN_MARKER = 'sparn';
+
+interface HookHandler {
+  type: string;
+  command: string;
+  timeout?: number;
+}
+
+interface HookMatcherGroup {
+  matcher?: string;
+  hooks: HookHandler[];
+}
+
+type HooksConfig = Record<string, HookMatcherGroup[]>;
+
 export async function hooksCommand(options: HooksCommandOptions): Promise<HooksCommandResult> {
   const { subcommand, global } = options;
 
-  // Determine settings.json path
   const settingsPath = global
     ? join(homedir(), '.claude', 'settings.json')
     : join(process.cwd(), '.claude', 'settings.json');
 
-  // Determine hook script paths (installed package location)
-  // When bundled, this code runs from dist/cli/index.js
-  // So hooks are at dist/hooks (one level up from cli, then into hooks)
+  // Find built hook scripts relative to this file
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
   const hooksDir = join(dirname(__dirname), 'hooks');
   const prePromptPath = join(hooksDir, 'pre-prompt.js');
   const postToolResultPath = join(hooksDir, 'post-tool-result.js');
+  const stopDocsRefreshPath = join(hooksDir, 'stop-docs-refresh.js');
 
   switch (subcommand) {
     case 'install':
-      return await installHooks(settingsPath, prePromptPath, postToolResultPath, global);
+      return installHooks(
+        settingsPath,
+        prePromptPath,
+        postToolResultPath,
+        stopDocsRefreshPath,
+        global,
+      );
     case 'uninstall':
-      return await uninstallHooks(settingsPath, global);
+      return uninstallHooks(settingsPath, global);
     case 'status':
-      return await hooksStatus(settingsPath, global);
+      return hooksStatus(settingsPath, global);
     default:
       return {
         success: false,
@@ -65,17 +89,14 @@ export async function hooksCommand(options: HooksCommandOptions): Promise<HooksC
   }
 }
 
-/**
- * Install hooks into settings.json
- */
-async function installHooks(
+function installHooks(
   settingsPath: string,
   prePromptPath: string,
   postToolResultPath: string,
+  stopDocsRefreshPath: string,
   global?: boolean,
-): Promise<HooksCommandResult> {
+): HooksCommandResult {
   try {
-    // Verify hook files exist
     if (!existsSync(prePromptPath)) {
       return {
         success: false,
@@ -92,30 +113,80 @@ async function installHooks(
       };
     }
 
-    // Read or create settings.json
+    if (!existsSync(stopDocsRefreshPath)) {
+      return {
+        success: false,
+        message: `Hook script not found: ${stopDocsRefreshPath}`,
+        error: 'Hook scripts not built. Run `npm run build` first.',
+      };
+    }
+
     let settings: Record<string, unknown> = {};
 
     if (existsSync(settingsPath)) {
       const settingsJson = readFileSync(settingsPath, 'utf-8');
       settings = JSON.parse(settingsJson);
     } else {
-      // Create .claude directory if needed
       const claudeDir = dirname(settingsPath);
       if (!existsSync(claudeDir)) {
         mkdirSync(claudeDir, { recursive: true });
       }
     }
 
-    // Add hooks to settings (Claude Code 2.1+ uses camelCase)
-    settings['hooks'] = {
-      ...(typeof settings['hooks'] === 'object' && settings['hooks'] !== null
-        ? settings['hooks']
-        : {}),
-      prePrompt: `node ${prePromptPath}`,
-      postToolResult: `node ${postToolResultPath}`,
-    };
+    // Get existing hooks or create empty object
+    const hooks: HooksConfig =
+      typeof settings['hooks'] === 'object' && settings['hooks'] !== null
+        ? (settings['hooks'] as HooksConfig)
+        : {};
 
-    // Write settings.json
+    // Remove any existing sparn hooks first (clean install)
+    removeSparnHooks(hooks);
+
+    // Add UserPromptSubmit hook (pre-prompt optimization)
+    if (!hooks[PRE_PROMPT_EVENT]) {
+      hooks[PRE_PROMPT_EVENT] = [];
+    }
+    hooks[PRE_PROMPT_EVENT].push({
+      hooks: [
+        {
+          type: 'command',
+          command: `node "${prePromptPath.replace(/\\/g, '/')}"`,
+          timeout: 10,
+        },
+      ],
+    });
+
+    // Add PostToolUse hook (output compression)
+    if (!hooks[POST_TOOL_EVENT]) {
+      hooks[POST_TOOL_EVENT] = [];
+    }
+    hooks[POST_TOOL_EVENT].push({
+      matcher: POST_TOOL_MATCHER,
+      hooks: [
+        {
+          type: 'command',
+          command: `node "${postToolResultPath.replace(/\\/g, '/')}"`,
+          timeout: 10,
+        },
+      ],
+    });
+
+    // Add Stop hook (auto-regenerate CLAUDE.md)
+    if (!hooks[STOP_DOCS_EVENT]) {
+      hooks[STOP_DOCS_EVENT] = [];
+    }
+    hooks[STOP_DOCS_EVENT].push({
+      hooks: [
+        {
+          type: 'command',
+          command: `node "${stopDocsRefreshPath.replace(/\\/g, '/')}"`,
+          timeout: 10,
+        },
+      ],
+    });
+
+    settings['hooks'] = hooks;
+
     writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
 
     return {
@@ -127,6 +198,7 @@ async function installHooks(
       hookPaths: {
         prePrompt: prePromptPath,
         postToolResult: postToolResultPath,
+        stopDocsRefresh: stopDocsRefreshPath,
       },
     };
   } catch (error) {
@@ -138,10 +210,7 @@ async function installHooks(
   }
 }
 
-/**
- * Uninstall hooks from settings.json
- */
-async function uninstallHooks(settingsPath: string, global?: boolean): Promise<HooksCommandResult> {
+function uninstallHooks(settingsPath: string, global?: boolean): HooksCommandResult {
   try {
     if (!existsSync(settingsPath)) {
       return {
@@ -151,23 +220,26 @@ async function uninstallHooks(settingsPath: string, global?: boolean): Promise<H
       };
     }
 
-    // Read settings.json
     const settingsJson = readFileSync(settingsPath, 'utf-8');
     const settings: Record<string, unknown> = JSON.parse(settingsJson);
 
-    // Remove hooks (Claude Code 2.1+ uses camelCase)
     if (settings['hooks'] && typeof settings['hooks'] === 'object' && settings['hooks'] !== null) {
-      const hooks = settings['hooks'] as Record<string, unknown>;
-      delete hooks['prePrompt'];
-      delete hooks['postToolResult'];
+      const hooks = settings['hooks'] as HooksConfig;
+      removeSparnHooks(hooks);
 
-      // Remove hooks object if empty
+      // Remove empty event arrays
+      for (const event of Object.keys(hooks)) {
+        if (Array.isArray(hooks[event]) && hooks[event].length === 0) {
+          delete hooks[event];
+        }
+      }
+
+      // Remove hooks key if empty
       if (Object.keys(hooks).length === 0) {
         delete settings['hooks'];
       }
     }
 
-    // Write settings.json
     writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
 
     return {
@@ -184,10 +256,7 @@ async function uninstallHooks(settingsPath: string, global?: boolean): Promise<H
   }
 }
 
-/**
- * Check hooks installation status
- */
-async function hooksStatus(settingsPath: string, global?: boolean): Promise<HooksCommandResult> {
+function hooksStatus(settingsPath: string, global?: boolean): HooksCommandResult {
   try {
     if (!existsSync(settingsPath)) {
       return {
@@ -199,35 +268,34 @@ async function hooksStatus(settingsPath: string, global?: boolean): Promise<Hook
       };
     }
 
-    // Read settings.json
     const settingsJson = readFileSync(settingsPath, 'utf-8');
     const settings: Record<string, unknown> = JSON.parse(settingsJson);
 
-    // Check if hooks are installed (Claude Code 2.1+ uses camelCase)
-    const hasHooks =
-      settings['hooks'] &&
-      typeof settings['hooks'] === 'object' &&
-      settings['hooks'] !== null &&
-      'prePrompt' in settings['hooks'] &&
-      'postToolResult' in settings['hooks'];
+    const hooks =
+      settings['hooks'] && typeof settings['hooks'] === 'object' && settings['hooks'] !== null
+        ? (settings['hooks'] as HooksConfig)
+        : {};
 
-    if (!hasHooks) {
+    const prePromptHook = findSparnHook(hooks, PRE_PROMPT_EVENT);
+    const postToolHook = findSparnHook(hooks, POST_TOOL_EVENT);
+    const stopDocsHook = findSparnHook(hooks, STOP_DOCS_EVENT);
+
+    if (!prePromptHook && !postToolHook && !stopDocsHook) {
       return {
         success: true,
-        message: global ? 'No global hooks installed' : 'No project hooks installed',
+        message: global ? 'No global sparn hooks installed' : 'No project sparn hooks installed',
         installed: false,
       };
     }
 
-    const hooks = settings['hooks'] as Record<string, string>;
-
     return {
       success: true,
-      message: global ? 'Global hooks active' : 'Project hooks active',
+      message: global ? 'Global sparn hooks active' : 'Project sparn hooks active',
       installed: true,
       hookPaths: {
-        prePrompt: hooks['prePrompt'] || '',
-        postToolResult: hooks['postToolResult'] || '',
+        prePrompt: prePromptHook || '(not installed)',
+        postToolResult: postToolHook || '(not installed)',
+        stopDocsRefresh: stopDocsHook || '(not installed)',
       },
     };
   } catch (error) {
@@ -237,4 +305,39 @@ async function hooksStatus(settingsPath: string, global?: boolean): Promise<Hook
       error: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+/**
+ * Remove all sparn-managed hooks from the config
+ */
+function removeSparnHooks(hooks: HooksConfig): void {
+  for (const event of Object.keys(hooks)) {
+    if (!Array.isArray(hooks[event])) continue;
+    hooks[event] = hooks[event].filter((group) => {
+      if (!Array.isArray(group.hooks)) return true;
+      // Remove groups where any hook command contains "sparn"
+      return !group.hooks.some(
+        (h) => typeof h.command === 'string' && h.command.includes(SPARN_MARKER),
+      );
+    });
+  }
+}
+
+/**
+ * Find a sparn hook command for a given event
+ */
+function findSparnHook(hooks: HooksConfig, event: string): string | null {
+  const groups = hooks[event];
+  if (!Array.isArray(groups)) return null;
+
+  for (const group of groups) {
+    if (!Array.isArray(group.hooks)) continue;
+    for (const h of group.hooks) {
+      if (typeof h.command === 'string' && h.command.includes(SPARN_MARKER)) {
+        return h.command;
+      }
+    }
+  }
+
+  return null;
 }

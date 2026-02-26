@@ -128,12 +128,10 @@ export function createMetricsCollector(): MetricsCollector {
     };
   }
 
-  function calculatePercentile(values: number[], percentile: number): number {
-    if (values.length === 0) return 0;
-
-    const sorted = [...values].sort((a, b) => a - b);
-    const index = Math.ceil((percentile / 100) * sorted.length) - 1;
-    return sorted[index] || 0;
+  function calculatePercentile(sortedValues: number[], percentile: number): number {
+    if (sortedValues.length === 0) return 0;
+    const index = Math.ceil((percentile / 100) * sortedValues.length) - 1;
+    return sortedValues[index] || 0;
   }
 
   function getSnapshot(): MetricsSnapshot {
@@ -147,7 +145,8 @@ export function createMetricsCollector(): MetricsCollector {
     const totalTokensBefore = optimizations.reduce((sum, m) => sum + m.tokensBefore, 0);
     const averageReduction = totalTokensBefore > 0 ? totalTokensSaved / totalTokensBefore : 0;
 
-    const durations = optimizations.map((m) => m.duration);
+    // Sort durations once, reuse for all percentile calculations
+    const sortedDurations = optimizations.map((m) => m.duration).sort((a, b) => a - b);
 
     const totalCacheQueries = cacheHits + cacheMisses;
     const hitRate = totalCacheQueries > 0 ? cacheHits / totalCacheQueries : 0;
@@ -159,9 +158,9 @@ export function createMetricsCollector(): MetricsCollector {
         totalDuration,
         totalTokensSaved,
         averageReduction,
-        p50Latency: calculatePercentile(durations, 50),
-        p95Latency: calculatePercentile(durations, 95),
-        p99Latency: calculatePercentile(durations, 99),
+        p50Latency: calculatePercentile(sortedDurations, 50),
+        p95Latency: calculatePercentile(sortedDurations, 95),
+        p99Latency: calculatePercentile(sortedDurations, 99),
       },
       cache: {
         hitRate,

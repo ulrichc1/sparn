@@ -1,5 +1,5 @@
 /**
- * Sparn - Neuroscience-inspired context optimization
+ * Sparn - Context optimization for AI coding agents
  *
  * Main library export for programmatic API usage.
  * Per Article I: CLI-First, Library-Second - all core modules are importable.
@@ -7,7 +7,7 @@
 
 export { createClaudeCodeAdapter } from './adapters/claude-code.js';
 export { createGenericAdapter } from './adapters/generic.js';
-export type { BTSPEmbedder } from './core/btsp-embedder.js';
+export type { BTSPEmbedder, BTSPEmbedderConfig } from './core/btsp-embedder.js';
 export { createBTSPEmbedder } from './core/btsp-embedder.js';
 export type { BudgetPruner, BudgetPrunerConfig } from './core/budget-pruner.js';
 export { createBudgetPruner, createBudgetPrunerFromConfig } from './core/budget-pruner.js';
@@ -19,6 +19,27 @@ export type {
   ContextPipelineStats,
 } from './core/context-pipeline.js';
 export { createContextPipeline } from './core/context-pipeline.js';
+// v1.4.0 — Debt Tracker
+export type {
+  DebtSeverity,
+  DebtStats,
+  DebtStatus,
+  DebtTracker,
+  TechDebt,
+} from './core/debt-tracker.js';
+export { createDebtTracker } from './core/debt-tracker.js';
+// v1.4.0 — Dependency Graph
+export type {
+  DependencyEdge,
+  DependencyGraph,
+  DependencyGraphConfig,
+  DependencyNode,
+  GraphAnalysis,
+} from './core/dependency-graph.js';
+export { createDependencyGraph } from './core/dependency-graph.js';
+// v1.4.0 — Docs Generator
+export type { DocsGenerator, DocsGeneratorConfig } from './core/docs-generator.js';
+export { createDocsGenerator } from './core/docs-generator.js';
 export type { EngramScorer, EngramScorerConfig } from './core/engram-scorer.js';
 export { createEngramScorer } from './core/engram-scorer.js';
 export type {
@@ -27,14 +48,27 @@ export type {
   IncrementalOptimizerState,
 } from './core/incremental-optimizer.js';
 export { createIncrementalOptimizer } from './core/incremental-optimizer.js';
-export type { KVMemory } from './core/kv-memory.js';
+export type { FTSResult, KVMemory } from './core/kv-memory.js';
 // Core modules
 export { createKVMemory } from './core/kv-memory.js';
+export type { MetricsCollector, MetricsSnapshot } from './core/metrics.js';
+export { createMetricsCollector, getMetrics } from './core/metrics.js';
+// v1.4.0 — Search Engine
+export type { IndexStats, SearchEngine, SearchOpts, SearchResult } from './core/search-engine.js';
+export { createSearchEngine } from './core/search-engine.js';
 export type { SleepCompressor } from './core/sleep-compressor.js';
-
 export { createSleepCompressor } from './core/sleep-compressor.js';
 export type { SparsePruner, SparsePrunerConfig } from './core/sparse-pruner.js';
 export { createSparsePruner } from './core/sparse-pruner.js';
+// v1.4.0 — Workflow Planner
+export type {
+  PlanExecConstraints,
+  PlanStep,
+  PlanVerifyResult,
+  SparnPlan,
+  WorkflowPlanner,
+} from './core/workflow-planner.js';
+export { createWorkflowPlanner } from './core/workflow-planner.js';
 export type {
   DaemonCommand,
   DaemonStartResult,
@@ -78,14 +112,29 @@ export type {
   StateDistribution,
 } from './types/memory.js';
 export type { PruneResult } from './types/pruner.js';
-export type { BlockType } from './utils/context-parser.js';
+export type { BlockType, JSONLMessage } from './utils/context-parser.js';
 export {
   createEntry,
   parseClaudeCodeContext,
   parseGenericContext,
+  parseJSONLContext,
+  parseJSONLLine,
 } from './utils/context-parser.js';
 export { hashContent } from './utils/hash.js';
 export type { Logger, LogLevel } from './utils/logger.js';
 export { createLogger } from './utils/logger.js';
 // Utilities
-export { estimateTokens } from './utils/tokenizer.js';
+export type { TFIDFIndex } from './utils/tfidf.js';
+export {
+  calculateIDF,
+  calculateTF,
+  calculateTFIDF,
+  createTFIDFIndex,
+  scoreTFIDF,
+  tokenize,
+} from './utils/tfidf.js';
+export {
+  countTokensPrecise,
+  estimateTokens,
+  setPreciseTokenCounting,
+} from './utils/tokenizer.js';

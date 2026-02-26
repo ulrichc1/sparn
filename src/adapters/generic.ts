@@ -1,7 +1,7 @@
 /**
  * Generic Adapter - Agent-agnostic optimization pipeline
  *
- * Orchestrates all 6 neuroscience modules to optimize context memory.
+ * Orchestrates all optimization modules to process context memory.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -26,7 +26,7 @@ export function createGenericAdapter(memory: KVMemory, config: SparnConfig): Age
   const pruner = createSparsePruner(config.pruning);
   const scorer = createEngramScorer(config.decay);
   const states = createConfidenceStates(config.states);
-  const btsp = createBTSPEmbedder();
+  const btsp = createBTSPEmbedder({ customPatterns: config.btspPatterns });
 
   async function optimize(
     context: string,
@@ -36,19 +36,23 @@ export function createGenericAdapter(memory: KVMemory, config: SparnConfig): Age
 
     // Parse context into entries (line-based for simplicity)
     const lines = context.split('\n').filter((line) => line.trim().length > 0);
-    const entries: MemoryEntry[] = lines.map((content) => ({
-      id: randomUUID(),
-      content,
-      hash: hashContent(content),
-      timestamp: Date.now(),
-      score: btsp.detectBTSP(content) ? 1.0 : 0.5, // BTSP gets high initial score
-      ttl: config.decay.defaultTTL * 3600, // Convert hours to seconds
-      state: 'ready' as const,
-      accessCount: 0,
-      tags: [],
-      metadata: {},
-      isBTSP: btsp.detectBTSP(content),
-    }));
+    const now = Date.now();
+    const entries: MemoryEntry[] = lines.map((content, index) => {
+      const isBTSP = btsp.detectBTSP(content);
+      return {
+        id: randomUUID(),
+        content,
+        hash: hashContent(content),
+        timestamp: now + index, // Unique timestamps preserve ordering
+        score: isBTSP ? 1.0 : 0.5,
+        ttl: config.decay.defaultTTL * 3600,
+        state: 'ready' as const,
+        accessCount: 0,
+        tags: [],
+        metadata: {},
+        isBTSP,
+      };
+    });
 
     // Calculate original token count
     const tokensBefore = entries.reduce((sum, e) => sum + estimateTokens(e.content), 0);

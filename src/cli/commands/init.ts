@@ -13,18 +13,16 @@ import { DEFAULT_CONFIG } from '../../types/config.js';
 import { getBanner } from '../ui/banner.js';
 import { brainPink, dim, neuralCyan } from '../ui/colors.js';
 
-// Get package.json version from project root
+// Get sparn's own version from its package.json
 function getVersion(): string {
   try {
-    // Try from current working directory first
-    const pkg = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf-8'));
-    return pkg.version;
-  } catch {
-    // Fallback: calculate from module location (after bundling: dist/cli/index.js)
+    // Read from sparn's own package.json (relative to compiled module)
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
     const pkg = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf-8'));
     return pkg.version;
+  } catch {
+    return '1.4.0';
   }
 }
 

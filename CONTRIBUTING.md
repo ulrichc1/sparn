@@ -86,7 +86,7 @@ Sparn follows a strict **Constitution** with 9 articles that govern all developm
 ### The 9 Articles
 
 1. **CLI-First, Library-Second**: CLI must work perfectly before library API
-2. **Neuroscience Fidelity**: All optimizations must map to brain principles
+2. **Algorithm Fidelity**: All optimizations must be deterministic and explainable
 3. **Test-First Development (TDD)**: Tests written before implementation
 4. **Agent-Agnostic Design**: Support multiple AI agents via adapters
 5. **Complementary to RTK**: Work alongside RTK, not replace it
@@ -264,13 +264,13 @@ git push origin feature/your-feature-name
 ```
 sparn/
 ├── src/
-│   ├── core/              # Neuroscience modules (library)
-│   │   ├── kv-memory.ts          # Hippocampal KV separation
-│   │   ├── sparse-pruner.ts      # Sparse coding (Principle #1)
-│   │   ├── engram-scorer.ts      # Engram theory (Principle #2)
-│   │   ├── confidence-states.ts  # Multi-state synapses (Principle #4)
-│   │   ├── btsp-embedder.ts      # One-shot learning (Principle #6)
-│   │   └── sleep-compressor.ts   # Sleep consolidation (Principle #5)
+│   ├── core/              # Optimization modules (library)
+│   │   ├── kv-memory.ts          # Key-value memory store
+│   │   ├── sparse-pruner.ts      # Relevance filtering
+│   │   ├── engram-scorer.ts      # Time-based decay scoring
+│   │   ├── confidence-states.ts  # Entry classification (active/ready/silent)
+│   │   ├── btsp-embedder.ts      # Critical event detection
+│   │   └── sleep-compressor.ts   # Periodic consolidation
 │   ├── adapters/          # Agent-specific adapters
 │   │   ├── generic.ts            # Generic agent adapter
 │   │   └── claude-code.ts        # Claude Code adapter
@@ -282,8 +282,7 @@ sparn/
 ├── tests/
 │   ├── unit/              # Unit tests (isolated modules)
 │   └── integration/       # Integration tests (full workflows)
-├── docs/
-│   └── NEUROSCIENCE.md    # Brain-to-code mapping docs
+├── docs/                  # Documentation
 ├── specs/
 │   └── 001-sparn-core/    # Project specifications
 └── dist/                  # Build output (gitignored)
@@ -466,4 +465,4 @@ git commit -m "docs: update NEUROSCIENCE.md with BTSP examples"
 
 ---
 
-**Thank you for contributing to Sparn!** 🧠✨
+**Thank you for contributing to Sparn!**

@@ -6,7 +6,7 @@ dist/
 build/
 *.tsbuildinfo
 
-# Sparn-specific
+# Sparn runtime data
 .sparn/
 
 # Logs
@@ -30,6 +30,7 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Testing
 coverage/
@@ -39,15 +40,32 @@ coverage/
 *.tmp
 .temp/
 
-# Internal development documents (not for public repo)
+# Internal development documents
 *-SUMMARY.md
 PHASE*.md
 SECURITY-REVIEW.md
 PUBLISH-READY.md
-.gitignore-info.md
 GDPR-COMPLIANCE.md
+RELEASE-*.md
+PROJECT-STATUS.md
+INTEGRATION-ROADMAP.md
+QUICK-INTEGRATION.md
+VALIDATION.md
+CLAUDE-CODE-SKILL.md
+TESTING-WORKFLOW.md
+VISION.md
+sparn-v1.3-review.md
+.gitignore-info.md
 
-# Benchmark results (generated files)
+# Planning & ad-hoc scripts
+*-plan.md
+automated-test.sh
+
+# Speckit / spec tooling
+.specify/
+specs/
+
+# Benchmark results (generated)
 benchmarks/results/
 
 # Claude Code session files

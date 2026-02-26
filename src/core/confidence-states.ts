@@ -1,8 +1,8 @@
 /**
- * Confidence States - Implements multi-state synapses
+ * Confidence States - Entry classification by score
  *
- * Neuroscience: Synapses exist in three states: silent, ready (potentiated), active.
- * Application: Classify memory entries by score into silent/ready/active states.
+ * Entries exist in three states: silent, ready, active.
+ * Classifies memory entries by score into silent/ready/active states.
  */
 
 import type { ConfidenceState, MemoryEntry, StateDistribution } from '../types/memory.js';
@@ -52,12 +52,12 @@ export function createConfidenceStates(config: ConfidenceStatesConfig): Confiden
     }
 
     // State based on score thresholds
-    // Active: score > 0.7
-    if (entry.score > activeThreshold) {
+    // Active: score >= 0.7
+    if (entry.score >= activeThreshold) {
       return 'active';
     }
 
-    // Ready: 0.3 <= score <= 0.7
+    // Ready: 0.3 <= score < 0.7
     if (entry.score >= readyThreshold) {
       return 'ready';
     }

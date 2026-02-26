@@ -4,7 +4,7 @@
  * Unlike SparsePruner which keeps top N% entries, BudgetPruner fits entries
  * within a target token budget using priority scoring that combines:
  * - TF-IDF relevance
- * - Engram decay
+ * - Time-based decay
  * - Confidence state multipliers
  * - BTSP bypass (always included)
  *
@@ -14,6 +14,7 @@
 import type { RealtimeConfig } from '../types/config.js';
 import type { MemoryEntry } from '../types/memory.js';
 import type { PruneResult } from '../types/pruner.js';
+import { createTFIDFIndex, scoreTFIDF, type TFIDFIndex } from '../utils/tfidf.js';
 import { estimateTokens } from '../utils/tokenizer.js';
 import { createEngramScorer } from './engram-scorer.js';
 
@@ -45,9 +46,10 @@ export interface BudgetPruner {
    * Calculate priority score for an entry
    * @param entry - Entry to score
    * @param allEntries - All entries for TF-IDF calculation
+   * @param index - Optional pre-computed TF-IDF index
    * @returns Priority score (higher = more important)
    */
-  priorityScore(entry: MemoryEntry, allEntries: MemoryEntry[]): number;
+  priorityScore(entry: MemoryEntry, allEntries: MemoryEntry[], index?: TFIDFIndex): number;
 }
 
 /**
@@ -58,48 +60,6 @@ export interface BudgetPruner {
 export function createBudgetPruner(config: BudgetPrunerConfig): BudgetPruner {
   const { tokenBudget, decay } = config;
   const engramScorer = createEngramScorer(decay);
-
-  function tokenize(text: string): string[] {
-    return text
-      .toLowerCase()
-      .split(/\s+/)
-      .filter((word) => word.length > 0);
-  }
-
-  function calculateTF(term: string, tokens: string[]): number {
-    const count = tokens.filter((t) => t === term).length;
-    // Sqrt capping to prevent common words from dominating
-    return Math.sqrt(count);
-  }
-
-  function calculateIDF(term: string, allEntries: MemoryEntry[]): number {
-    const totalDocs = allEntries.length;
-    const docsWithTerm = allEntries.filter((entry) => {
-      const tokens = tokenize(entry.content);
-      return tokens.includes(term);
-    }).length;
-
-    if (docsWithTerm === 0) return 0;
-
-    return Math.log(totalDocs / docsWithTerm);
-  }
-
-  function calculateTFIDF(entry: MemoryEntry, allEntries: MemoryEntry[]): number {
-    const tokens = tokenize(entry.content);
-    if (tokens.length === 0) return 0;
-
-    const uniqueTerms = [...new Set(tokens)];
-    let totalScore = 0;
-
-    for (const term of uniqueTerms) {
-      const tf = calculateTF(term, tokens);
-      const idf = calculateIDF(term, allEntries);
-      totalScore += tf * idf;
-    }
-
-    // Normalize by entry length
-    return totalScore / tokens.length;
-  }
 
   function getStateMultiplier(entry: MemoryEntry): number {
     // BTSP entries get max priority (handled separately, but keep high multiplier)
@@ -118,8 +78,14 @@ export function createBudgetPruner(config: BudgetPrunerConfig): BudgetPruner {
     }
   }
 
-  function priorityScore(entry: MemoryEntry, allEntries: MemoryEntry[]): number {
-    const tfidf = calculateTFIDF(entry, allEntries);
+  function priorityScore(
+    entry: MemoryEntry,
+    allEntries: MemoryEntry[],
+    index?: TFIDFIndex,
+  ): number {
+    const tfidf = index
+      ? scoreTFIDF(entry, index)
+      : scoreTFIDF(entry, createTFIDFIndex(allEntries));
     const currentScore = engramScorer.calculateScore(entry);
     const engramDecay = 1 - currentScore; // Lower decay = higher priority
     const stateMultiplier = getStateMultiplier(entry);
@@ -146,16 +112,39 @@ export function createBudgetPruner(config: BudgetPrunerConfig): BudgetPruner {
     // Calculate original token count
     const originalTokens = entries.reduce((sum, e) => sum + estimateTokens(e.content), 0);
 
-    // Step 1: Separate BTSP entries (always included, bypass budget)
+    // Step 1: Separate BTSP entries (high priority but still within budget)
     const btspEntries = entries.filter((e) => e.isBTSP);
     const regularEntries = entries.filter((e) => !e.isBTSP);
 
-    const btspTokens = btspEntries.reduce((sum, e) => sum + estimateTokens(e.content), 0);
+    // Guard: if BTSP entries alone exceed budget, only include most recent ones
+    let includedBtsp: MemoryEntry[] = [];
+    let btspTokens = 0;
+    const sortedBtsp = [...btspEntries].sort((a, b) => b.timestamp - a.timestamp);
+    for (const entry of sortedBtsp) {
+      const tokens = estimateTokens(entry.content);
+      if (btspTokens + tokens <= budget * 0.8) {
+        // Reserve 20% for regular entries
+        includedBtsp.push(entry);
+        btspTokens += tokens;
+      }
+    }
+    // If no BTSP fits, include at least the most recent one
+    if (includedBtsp.length === 0 && sortedBtsp.length > 0) {
+      const firstBtsp = sortedBtsp[0];
+      if (firstBtsp) {
+        includedBtsp = [firstBtsp];
+        btspTokens = estimateTokens(firstBtsp.content);
+      }
+    }
 
-    // Step 2: Score regular entries
+    // Track BTSP entries excluded by the guard
+    const excludedBtsp = btspEntries.filter((e) => !includedBtsp.includes(e));
+
+    // Step 2: Build TF-IDF index once and score regular entries
+    const tfidfIndex = createTFIDFIndex(entries);
     const scored = regularEntries.map((entry) => ({
       entry,
-      score: priorityScore(entry, entries),
+      score: priorityScore(entry, entries, tfidfIndex),
       tokens: estimateTokens(entry.content),
     }));
 
@@ -163,8 +152,8 @@ export function createBudgetPruner(config: BudgetPrunerConfig): BudgetPruner {
     scored.sort((a, b) => b.score - a.score);
 
     // Step 4: Greedy fill until budget exceeded
-    const kept: MemoryEntry[] = [...btspEntries];
-    const removed: MemoryEntry[] = [];
+    const kept: MemoryEntry[] = [...includedBtsp];
+    const removed: MemoryEntry[] = [...excludedBtsp];
     let currentTokens = btspTokens;
 
     for (const item of scored) {

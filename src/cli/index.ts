@@ -10,24 +10,38 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
+import { load as loadYAML } from 'js-yaml';
+import { playCommand, playComplete, playEnd, playStartup } from '../utils/audio.js';
+import { setPreciseTokenCounting } from '../utils/tokenizer.js';
 import { getBanner } from './ui/banner.js';
 
-// Get package.json version from project root
+// Get sparn's own version from its package.json
 function getVersion(): string {
   try {
-    // Try from current working directory first (most common case)
-    const pkg = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf-8'));
-    return pkg.version;
-  } catch {
-    // Fallback: calculate from module location
+    // Read from sparn's own package.json (relative to compiled module)
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
     const pkg = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf-8'));
     return pkg.version;
+  } catch {
+    return '1.4.0';
   }
 }
 
 const VERSION = getVersion();
+
+// Load precise token counting setting from config if available
+try {
+  const configPath = resolve(process.cwd(), '.sparn/config.yaml');
+  const configContent = readFileSync(configPath, 'utf-8');
+  // biome-ignore lint/suspicious/noExplicitAny: parseYAML returns unknown
+  const config = loadYAML(configContent) as any;
+  if (config?.realtime?.preciseTokenCounting) {
+    setPreciseTokenCounting(true);
+  }
+} catch {
+  // Config not found or not initialized — use default heuristic
+}
 
 // Lazy-loaded imports (loaded only when commands are executed):
 // - createKVMemory (heavy: better-sqlite3)
@@ -110,9 +124,29 @@ const program = new Command();
 
 program
   .name('sparn')
-  .description('Neuroscience-inspired context optimization for AI coding agents')
+  .description('Context optimization for AI coding agents')
   .version(VERSION, '-v, --version', 'Output the current version')
-  .helpOption('-h, --help', 'Display help for command');
+  .helpOption('-h, --help', 'Display help for command')
+  .enablePositionalOptions();
+
+playStartup();
+
+program.hook('preAction', () => {
+  playCommand();
+});
+
+program.hook('postAction', () => {
+  playComplete();
+});
+
+process.on('exit', () => {
+  playEnd();
+});
+
+process.once('SIGINT', () => {
+  // Force exit to avoid inquirer re-prompting — 'exit' event will play end sound
+  process.exit(0);
+});
 
 // Init command
 program
@@ -127,7 +161,7 @@ Examples:
   $ sparn init --force          # Overwrite existing .sparn/ directory
 
 Files Created:
-  .sparn/config.yaml            # Configuration with neuroscience parameters
+  .sparn/config.yaml            # Configuration with optimization parameters
   .sparn/memory.db              # SQLite database for context storage
 
 Next Steps:
@@ -157,7 +191,7 @@ Next Steps:
 // Optimize command
 program
   .command('optimize')
-  .description('Optimize context memory using neuroscience principles')
+  .description('Optimize context memory')
   .option('-i, --input <file>', 'Input file path')
   .option('-o, --output <file>', 'Output file path')
   .option('--dry-run', 'Run without saving to memory')
@@ -172,11 +206,11 @@ Examples:
   $ sparn optimize -i context.txt --verbose           # Show entry scores
 
 How It Works:
-  1. Sparse Coding: Keeps only 2-5% most relevant context
-  2. Engram Theory: Applies decay to old memories
-  3. Multi-State Synapses: Classifies as silent/ready/active
-  4. BTSP: Locks critical events (errors, stack traces)
-  5. Sleep Replay: Consolidates and compresses
+  1. Relevance Filtering: Keeps only 2-5% most relevant context
+  2. Time-Based Decay: Fades old entries unless reinforced
+  3. Entry Classification: Classifies as silent/ready/active
+  4. Critical Event Detection: Locks errors and stack traces
+  5. Periodic Consolidation: Merges duplicates and cleans up
 
 Typical Results:
   • 60-90% token reduction
@@ -197,7 +231,7 @@ Typical Results:
 
       // Read from stdin if no input file specified
       let input: string | undefined;
-      if (!options.input && process.stdin.isTTY === false) {
+      if (!options.input && !process.stdin.isTTY) {
         spinner.text = '📖 Reading context from stdin...';
         const chunks: Buffer[] = [];
         for await (const chunk of process.stdin) {
@@ -213,47 +247,49 @@ Typical Results:
       const dbPath = resolve(process.cwd(), '.sparn/memory.db');
       const memory = await createKVMemory(dbPath);
 
-      // Run optimization
-      spinner.text = '⚡ Applying neuroscience principles...';
-      const result = await optimizeCommand({
-        input,
-        inputFile: options.input,
-        outputFile: options.output,
-        memory,
-        dryRun: options.dryRun || false,
-        verbose: options.verbose || false,
-      });
+      try {
+        // Run optimization
+        spinner.text = '⚡ Optimizing context...';
+        const result = await optimizeCommand({
+          input,
+          inputFile: options.input,
+          outputFile: options.output,
+          memory,
+          dryRun: options.dryRun || false,
+          verbose: options.verbose || false,
+        });
 
-      spinner.succeed(neuralCyan(`Optimization complete in ${result.durationMs}ms!`));
+        spinner.succeed(neuralCyan(`Optimization complete in ${result.durationMs}ms!`));
 
-      // Display visual impact
-      showTokenSavings(result.tokensBefore, result.tokensAfter, result.reduction);
+        // Display visual impact
+        showTokenSavings(result.tokensBefore, result.tokensAfter, result.reduction);
 
-      // Show entry stats
-      console.log(synapseViolet('  Entry Distribution:'));
-      console.log(`    • Processed: ${result.entriesProcessed}`);
-      console.log(`    • Kept: ${result.entriesKept}`);
-      console.log(`    • Active: ${result.stateDistribution.active}`);
-      console.log(`    • Ready: ${result.stateDistribution.ready}`);
-      console.log(`    • Silent: ${result.stateDistribution.silent}\n`);
+        // Show entry stats
+        console.log(synapseViolet('  Entry Distribution:'));
+        console.log(`    • Processed: ${result.entriesProcessed}`);
+        console.log(`    • Kept: ${result.entriesKept}`);
+        console.log(`    • Active: ${result.stateDistribution.active}`);
+        console.log(`    • Ready: ${result.stateDistribution.ready}`);
+        console.log(`    • Silent: ${result.stateDistribution.silent}\n`);
 
-      // Show verbose details if requested
-      if (options.verbose && result.details) {
-        console.log(neuralCyan('  📋 Entry Details:'));
-        for (const detail of result.details) {
-          console.log(
-            `    ${detail.id.substring(0, 8)}: score=${detail.score.toFixed(2)}, state=${detail.state}, tokens=${detail.tokens}`,
-          );
+        // Show verbose details if requested
+        if (options.verbose && result.details) {
+          console.log(neuralCyan('  📋 Entry Details:'));
+          for (const detail of result.details) {
+            console.log(
+              `    ${detail.id.substring(0, 8)}: score=${detail.score.toFixed(2)}, state=${detail.state}, tokens=${detail.tokens}`,
+            );
+          }
+          console.log();
         }
-        console.log();
-      }
 
-      // Write to stdout if no output file
-      if (!options.output) {
-        console.log(result.output);
+        // Write to stdout if no output file
+        if (!options.output) {
+          console.log(result.output);
+        }
+      } finally {
+        await memory.close();
       }
-
-      await memory.close();
     } catch (error) {
       spinner.fail(errorRed('Optimization failed'));
       console.error(errorRed('Error:'), error instanceof Error ? error.message : String(error));
@@ -309,38 +345,40 @@ Tracked Metrics:
         confirmReset = true; // Auto-confirm for now
       }
 
-      // Get stats
-      if (spinner) spinner.text = '📈 Calculating statistics...';
-      const result = await statsCommand({
-        memory,
-        graph: options.graph || false,
-        reset: options.reset || false,
-        confirmReset,
-        json: options.json || false,
-      });
+      try {
+        // Get stats
+        if (spinner) spinner.text = '📈 Calculating statistics...';
+        const result = await statsCommand({
+          memory,
+          graph: options.graph || false,
+          reset: options.reset || false,
+          confirmReset,
+          json: options.json || false,
+        });
 
-      if (spinner) spinner.succeed(neuralCyan('Statistics ready!'));
+        if (spinner) spinner.succeed(neuralCyan('Statistics ready!'));
 
-      // Display output
-      if (options.json) {
-        console.log(result.json);
-      } else if (options.reset && result.resetConfirmed) {
-        console.log(neuralCyan('\n✓ Statistics cleared\n'));
-      } else {
-        // Display stats summary
-        console.log(neuralCyan('\n📊 Optimization Statistics\n'));
-        console.log(`  Total optimizations: ${result.totalCommands}`);
-        console.log(`  Total tokens saved: ${result.totalTokensSaved.toLocaleString()}`);
-        console.log(`  Average reduction: ${(result.averageReduction * 100).toFixed(1)}%`);
+        // Display output
+        if (options.json) {
+          console.log(result.json);
+        } else if (options.reset && result.resetConfirmed) {
+          console.log(neuralCyan('\n✓ Statistics cleared\n'));
+        } else {
+          // Display stats summary
+          console.log(neuralCyan('\n📊 Optimization Statistics\n'));
+          console.log(`  Total optimizations: ${result.totalCommands}`);
+          console.log(`  Total tokens saved: ${result.totalTokensSaved.toLocaleString()}`);
+          console.log(`  Average reduction: ${(result.averageReduction * 100).toFixed(1)}%`);
 
-        if (options.graph && result.graph) {
-          console.log(result.graph);
+          if (options.graph && result.graph) {
+            console.log(result.graph);
+          }
+
+          console.log();
         }
-
-        console.log();
+      } finally {
+        await memory.close();
       }
-
-      await memory.close();
     } catch (error) {
       if (spinner) spinner.fail(errorRed('Statistics failed'));
       console.error(errorRed('Error:'), error instanceof Error ? error.message : String(error));
@@ -352,6 +390,7 @@ Tracked Metrics:
 program
   .command('relay <command> [args...]')
   .description('Proxy a CLI command through optimization')
+  .passThroughOptions()
   .option('--silent', 'Suppress token savings summary')
   .addHelpText(
     'after',
@@ -382,26 +421,31 @@ The relay command passes the exit code from the wrapped command.
       const dbPath = resolve(process.cwd(), '.sparn/memory.db');
       const memory = await createKVMemory(dbPath);
 
-      // Execute relay
-      const result = await relayCommand({
-        command,
-        args: args || [],
-        memory,
-        silent: options.silent || false,
-      });
+      let exitCode = 1;
+      try {
+        // Execute relay
+        const result = await relayCommand({
+          command,
+          args: args || [],
+          memory,
+          silent: options.silent || false,
+        });
 
-      // Display optimized output
-      console.log(result.optimizedOutput);
+        // Display optimized output
+        console.log(result.optimizedOutput);
 
-      // Display summary if not silent
-      if (result.summary) {
-        console.error(neuralCyan(`\n${result.summary}\n`));
+        // Display summary if not silent
+        if (result.summary) {
+          console.error(neuralCyan(`\n${result.summary}\n`));
+        }
+
+        exitCode = result.exitCode;
+      } finally {
+        await memory.close();
       }
 
-      await memory.close();
-
       // Exit with same code as proxied command
-      process.exit(result.exitCode);
+      process.exit(exitCode);
     } catch (error) {
       console.error(errorRed('Error:'), error instanceof Error ? error.message : String(error));
       process.exit(1);
@@ -452,29 +496,31 @@ Typical Results:
       const dbPath = resolve(process.cwd(), '.sparn/memory.db');
       const memory = await createKVMemory(dbPath);
 
-      // Run consolidation
-      spinner.text = '🔍 Identifying decayed entries...';
-      const result = await consolidateCommand({ memory });
+      try {
+        // Run consolidation
+        spinner.text = '🔍 Identifying decayed entries...';
+        const result = await consolidateCommand({ memory });
 
-      spinner.succeed(neuralCyan(`Consolidation complete in ${result.durationMs}ms!`));
+        spinner.succeed(neuralCyan(`Consolidation complete in ${result.durationMs}ms!`));
 
-      // Display visual impact
-      showConsolidationSummary(
-        result.entriesBefore,
-        result.entriesAfter,
-        result.decayedRemoved,
-        result.duplicatesRemoved,
-        result.durationMs,
-      );
+        // Display visual impact
+        showConsolidationSummary(
+          result.entriesBefore,
+          result.entriesAfter,
+          result.decayedRemoved,
+          result.duplicatesRemoved,
+          result.durationMs,
+        );
 
-      // Database vacuum status
-      if (result.vacuumCompleted) {
-        console.log(synapseViolet('  ✓ Database VACUUM completed\n'));
-      } else {
-        console.log(errorRed('  ✗ Database VACUUM failed\n'));
+        // Database vacuum status
+        if (result.vacuumCompleted) {
+          console.log(synapseViolet('  ✓ Database VACUUM completed\n'));
+        } else {
+          console.log(errorRed('  ✗ Database VACUUM failed\n'));
+        }
+      } finally {
+        await memory.close();
       }
-
-      await memory.close();
     } catch (error) {
       spinner.fail(errorRed('Consolidation failed'));
       console.error(errorRed('Error:'), error instanceof Error ? error.message : String(error));
@@ -497,8 +543,8 @@ Examples:
   $ sparn config --json                 # View full config as JSON
 
 Configuration Keys:
-  pruning.threshold                     # Sparse coding threshold (2-5%)
-  decay.halfLife                        # Engram decay half-life (hours)
+  pruning.threshold                     # Relevance threshold (2-5%)
+  decay.halfLife                        # Decay half-life (hours)
   decay.minScore                        # Minimum decay score (0.0-1.0)
   states.activeThreshold                # Active state threshold
   states.readyThreshold                 # Ready state threshold
@@ -532,11 +578,15 @@ The config file is located at .sparn/config.yaml
 
       // Handle editor mode
       if (result.editorPath && !options.json) {
-        const editor = process.env['EDITOR'] || 'vim';
-        console.log(neuralCyan(`\n📝 Opening config in ${editor}...\n`));
+        const editorEnv = process.env['EDITOR'] || 'vim';
+        // Support multi-word EDITOR values (e.g. "code --wait")
+        const editorParts = editorEnv.split(/\s+/);
+        const editorCmd = editorParts[0] || 'vim';
+        const editorArgs = [...editorParts.slice(1), result.editorPath];
+        console.log(neuralCyan(`\n📝 Opening config in ${editorCmd}...\n`));
 
         // Spawn editor
-        const child = spawn(editor, [result.editorPath], {
+        const child = spawn(editorCmd, editorArgs, {
           stdio: 'inherit',
         });
 
@@ -690,6 +740,7 @@ and compress verbose tool results after execution.
           console.log('\nHook paths:');
           console.log(`  pre-prompt: ${result.hookPaths.prePrompt}`);
           console.log(`  post-tool-result: ${result.hookPaths.postToolResult}`);
+          console.log(`  stop-docs-refresh: ${result.hookPaths.stopDocsRefresh}`);
         }
 
         console.log();
@@ -741,20 +792,377 @@ and configuring Sparn without memorizing CLI flags.
       const dbPath = resolve(process.cwd(), '.sparn/memory.db');
       const memory = await createKVMemory(dbPath);
 
-      // Config path
-      const configPath = resolve(process.cwd(), '.sparn/config.yaml');
+      try {
+        // Config path
+        const configPath = resolve(process.cwd(), '.sparn/config.yaml');
 
-      // Run interactive mode
-      await interactiveCommand({
-        memory,
-        configPath,
-      });
-
-      await memory.close();
+        // Run interactive mode
+        await interactiveCommand({
+          memory,
+          configPath,
+        });
+      } finally {
+        await memory.close();
+      }
     } catch (error) {
       console.error(errorRed('Error:'), error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
+  });
+
+// Graph command
+program
+  .command('graph')
+  .description('Analyze dependency graph of the project')
+  .option('--entry <file>', 'Start from a specific entry point')
+  .option('--depth <n>', 'Limit traversal depth', (v: string) => Number.parseInt(v, 10))
+  .option('--focus <pattern>', 'Focus on modules matching pattern')
+  .option('--json', 'Output as JSON')
+  .action(async (options) => {
+    const { graphCommand } = await import('./commands/graph.js');
+    const { neuralCyan, synapseViolet, errorRed } = await import('./ui/colors.js');
+
+    try {
+      const result = await graphCommand({
+        entry: options.entry,
+        depth: options.depth,
+        focus: options.focus,
+        json: options.json,
+      });
+
+      if (options.json) {
+        console.log(result.json);
+      } else {
+        console.log(neuralCyan('\n📊 Dependency Graph Analysis\n'));
+        console.log(`  Files analyzed: ${result.nodeCount}`);
+        console.log(`  Entry points: ${result.analysis.entryPoints.length}`);
+        console.log(`  Orphaned files: ${result.analysis.orphans.length}`);
+        console.log(`  Total tokens: ${result.analysis.totalTokens.toLocaleString()}`);
+
+        if (result.analysis.hotPaths.length > 0) {
+          console.log(synapseViolet('\n  Hot paths (most imported):'));
+          for (const path of result.analysis.hotPaths.slice(0, 5)) {
+            console.log(`    ${path}`);
+          }
+        }
+
+        if (result.analysis.entryPoints.length > 0) {
+          console.log(synapseViolet('\n  Entry points:'));
+          for (const path of result.analysis.entryPoints.slice(0, 5)) {
+            console.log(`    ${path}`);
+          }
+        }
+
+        console.log();
+      }
+    } catch (error) {
+      console.error(errorRed('Error:'), error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    }
+  });
+
+// Search command
+program
+  .command('search [query]')
+  .description('Search codebase using FTS5 + ripgrep')
+  .option('--glob <pattern>', 'Filter by file glob pattern')
+  .option('--max <n>', 'Max results (default: 10)', (v: string) => Number.parseInt(v, 10))
+  .option('--json', 'Output as JSON')
+  .action(async (query, options) => {
+    const { searchCommand } = await import('./commands/search.js');
+    const { neuralCyan, synapseViolet, errorRed } = await import('./ui/colors.js');
+
+    try {
+      // Detect subcommands
+      let subcommand: 'init' | 'refresh' | undefined;
+      if (query === 'init') subcommand = 'init';
+      if (query === 'refresh') subcommand = 'refresh';
+
+      const result = await searchCommand({
+        query: subcommand ? undefined : query,
+        subcommand,
+        glob: options.glob,
+        maxResults: options.max,
+        json: options.json,
+      });
+
+      if (options.json && result.json) {
+        console.log(result.json);
+      } else if (result.message) {
+        console.log(neuralCyan(`\n✓ ${result.message}\n`));
+      }
+
+      if (result.results && !options.json) {
+        console.log(neuralCyan(`\n🔍 ${result.results.length} results\n`));
+        for (const r of result.results) {
+          console.log(synapseViolet(`  ${r.filePath}:${r.lineNumber}`));
+          console.log(`    ${r.content.trim()}`);
+          console.log();
+        }
+      }
+    } catch (error) {
+      console.error(errorRed('Error:'), error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    }
+  });
+
+// Plan command
+program
+  .command('plan <task>')
+  .description('Create an execution plan for a task')
+  .option('--files <files...>', 'Files needed for the task')
+  .option('--searches <queries...>', 'Search queries to run')
+  .option('--max-reads <n>', 'Max file reads (default: 5)', (v: string) => Number.parseInt(v, 10))
+  .option('--json', 'Output as JSON')
+  .action(async (task, options) => {
+    const { planCommand } = await import('./commands/plan.js');
+    const { neuralCyan, synapseViolet, errorRed } = await import('./ui/colors.js');
+
+    try {
+      if (task === 'list') {
+        const { planListCommand } = await import('./commands/plan.js');
+        const result = await planListCommand({ json: options.json });
+
+        if (options.json) {
+          console.log(result.json);
+        } else {
+          console.log(neuralCyan('\n📋 Plans\n'));
+          for (const p of result.plans) {
+            console.log(`  ${p.id} [${p.status}] ${p.task}`);
+          }
+          if (result.plans.length === 0) console.log('  No plans found');
+          console.log();
+        }
+        return;
+      }
+
+      const result = await planCommand({
+        task,
+        files: options.files,
+        searches: options.searches,
+        maxReads: options.maxReads,
+        json: options.json,
+      });
+
+      if (options.json) {
+        console.log(result.json);
+      } else {
+        console.log(neuralCyan(`\n✓ ${result.message}`));
+        console.log(synapseViolet('\n  Steps:'));
+        for (const step of result.plan.steps) {
+          console.log(`    ${step.order}. [${step.action}] ${step.target} — ${step.description}`);
+        }
+        console.log();
+      }
+    } catch (error) {
+      console.error(errorRed('Error:'), error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    }
+  });
+
+// Exec command
+program
+  .command('exec <planId>')
+  .description('Execute a plan with constraints')
+  .option('--json', 'Output as JSON')
+  .action(async (planId, options) => {
+    const { execCommand } = await import('./commands/exec.js');
+    const { neuralCyan, errorRed } = await import('./ui/colors.js');
+
+    try {
+      const result = await execCommand({ planId, json: options.json });
+
+      if (options.json) {
+        console.log(result.json);
+      } else {
+        console.log(neuralCyan(`\n✓ ${result.message}\n`));
+      }
+    } catch (error) {
+      console.error(errorRed('Error:'), error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    }
+  });
+
+// Verify command
+program
+  .command('verify <planId>')
+  .description('Verify plan completion')
+  .option('--json', 'Output as JSON')
+  .action(async (planId, options) => {
+    const { verifyCommand } = await import('./commands/verify.js');
+    const { neuralCyan, synapseViolet, errorRed } = await import('./ui/colors.js');
+
+    try {
+      const result = await verifyCommand({ planId, json: options.json });
+
+      if (options.json) {
+        console.log(result.json);
+      } else {
+        console.log(neuralCyan(`\n${result.message}`));
+        console.log(synapseViolet('\n  Steps:'));
+        for (const d of result.verification.details) {
+          const icon = d.status === 'completed' ? '✓' : d.status === 'failed' ? '✗' : '○';
+          console.log(`    ${icon} ${d.step}. [${d.action}] ${d.target} — ${d.status}`);
+        }
+        console.log();
+      }
+    } catch (error) {
+      console.error(errorRed('Error:'), error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    }
+  });
+
+// Docs command
+program
+  .command('docs')
+  .description('Auto-generate CLAUDE.md for the project')
+  .option('-o, --output <file>', 'Output file path (default: CLAUDE.md)')
+  .option('--no-graph', 'Skip dependency graph analysis')
+  .option('--json', 'Output content as JSON')
+  .action(async (options) => {
+    const { docsCommand } = await import('./commands/docs.js');
+    const { neuralCyan, errorRed } = await import('./ui/colors.js');
+
+    try {
+      const result = await docsCommand({
+        output: options.output,
+        includeGraph: options.graph !== false,
+        json: options.json,
+      });
+
+      if (options.json) {
+        console.log(JSON.stringify({ content: result.content }, null, 2));
+      } else {
+        console.log(neuralCyan(`\n✓ ${result.message}\n`));
+      }
+    } catch (error) {
+      console.error(errorRed('Error:'), error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    }
+  });
+
+// Debt command
+program
+  .command('debt <subcommand> [description]')
+  .description('Track technical debt')
+  .option('--severity <level>', 'Severity: P0, P1, P2 (default: P1)')
+  .option('--due <date>', 'Repayment date (YYYY-MM-DD)')
+  .option('--files <files...>', 'Affected files')
+  .option('--tokens <n>', 'Token cost estimate', (v: string) => Number.parseInt(v, 10))
+  .option('--id <id>', 'Debt ID (for resolve/start)')
+  .option('--overdue', 'Show only overdue debts')
+  .option('--json', 'Output as JSON')
+  .action(async (subcommand, description, options) => {
+    const { debtCommand } = await import('./commands/debt.js');
+    const { neuralCyan, synapseViolet, errorRed } = await import('./ui/colors.js');
+
+    try {
+      const result = await debtCommand({
+        subcommand: subcommand as 'add' | 'list' | 'resolve' | 'stats' | 'start',
+        description,
+        severity: options.severity,
+        due: options.due,
+        files: options.files,
+        tokenCost: options.tokens,
+        id: options.id || description,
+        overdue: options.overdue,
+        json: options.json,
+      });
+
+      if (options.json && result.json) {
+        console.log(result.json);
+      } else {
+        console.log(neuralCyan(`\n✓ ${result.message}`));
+
+        if (result.debts) {
+          for (const d of result.debts) {
+            const due = new Date(d.repayment_date).toLocaleDateString();
+            const overdue =
+              d.repayment_date < Date.now() && d.status !== 'resolved' ? ' [OVERDUE]' : '';
+            console.log(
+              synapseViolet(
+                `  ${d.id} [${d.severity}] ${d.status}${overdue} — ${d.description} (due: ${due})`,
+              ),
+            );
+          }
+        }
+
+        if (result.stats) {
+          console.log(
+            `  Open: ${result.stats.open} | In Progress: ${result.stats.in_progress} | Resolved: ${result.stats.resolved}`,
+          );
+          console.log(
+            `  Overdue: ${result.stats.overdue} | Repayment rate: ${(result.stats.repaymentRate * 100).toFixed(0)}%`,
+          );
+        }
+
+        console.log();
+      }
+    } catch (error) {
+      console.error(errorRed('Error:'), error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    }
+  });
+
+// Dashboard command
+program
+  .command('dashboard')
+  .alias('dash')
+  .description('Launch interactive TUI dashboard')
+  .option('--refresh <ms>', 'Refresh interval in milliseconds', (v: string) =>
+    Number.parseInt(v, 10),
+  )
+  .action(async (options) => {
+    const { renderDashboard } = await import('./dashboard/app.js');
+    const dbPath = resolve(process.cwd(), '.sparn/memory.db');
+    const projectRoot = process.cwd();
+    renderDashboard({
+      dbPath,
+      projectRoot,
+      refreshInterval: options.refresh ?? 2000,
+    });
+  });
+
+// Status command (quick overview)
+program
+  .command('status')
+  .description('Quick project status overview')
+  .action(async () => {
+    const { neuralCyan, synapseViolet } = await import('./ui/colors.js');
+
+    console.log(neuralCyan(`\n🧠 Sparn v${VERSION} Status\n`));
+
+    // Check .sparn init
+    const { existsSync: exists } = await import('node:fs');
+    const sparnDir = resolve(process.cwd(), '.sparn');
+    const initialized = exists(sparnDir);
+    console.log(`  Initialized: ${initialized ? '✓' : '✗ (run sparn init)'}`);
+
+    if (initialized) {
+      // Check database
+      const dbPath = resolve(sparnDir, 'memory.db');
+      console.log(`  Database: ${exists(dbPath) ? '✓' : '✗'}`);
+
+      // Check search index
+      const searchDb = resolve(sparnDir, 'search.db');
+      console.log(`  Search index: ${exists(searchDb) ? '✓' : '✗ (run sparn search init)'}`);
+
+      // Check plans
+      const plansDir = resolve(sparnDir, 'plans');
+      if (exists(plansDir)) {
+        const { readdirSync: readDir } = await import('node:fs');
+        const plans = readDir(plansDir).filter((f: string) => f.endsWith('.json'));
+        console.log(`  Plans: ${plans.length}`);
+      }
+
+      // Check daemon
+      const pidFile = resolve(sparnDir, 'daemon.pid');
+      console.log(`  Daemon: ${exists(pidFile) ? '✓ running' : '✗ stopped'}`);
+    }
+
+    console.log(
+      synapseViolet('\n  Commands: graph | search | plan | exec | verify | docs | debt\n'),
+    );
   });
 
 // Show banner on version

@@ -6,12 +6,12 @@
 import chalk from 'chalk';
 
 /**
- * Neural Cyan (#00D4AA) - Success, active operations
+ * Primary Cyan (#00D4AA) - Success, active operations
  */
 export const neuralCyan = chalk.hex('#00D4AA');
 
 /**
- * Synapse Violet (#7B61FF) - Highlights, graphs, numbers
+ * Accent Violet (#7B61FF) - Highlights, graphs, numbers
  */
 export const synapseViolet = chalk.hex('#7B61FF');
 
@@ -21,7 +21,7 @@ export const synapseViolet = chalk.hex('#7B61FF');
 export const errorRed = chalk.hex('#FF6B6B');
 
 /**
- * Brain Pink (#FF6B9D) - Logo color, brain-related messages, key branding
+ * Brand Pink (#FF6B9D) - Logo color, branded messages, key branding
  */
 export const brainPink = chalk.hex('#FF6B9D');
 

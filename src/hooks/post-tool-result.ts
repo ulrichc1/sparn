@@ -1,15 +1,12 @@
 #!/usr/bin/env node
 /**
- * Post-Tool-Result Hook - Claude Code hook for compressing verbose tool output
+ * PostToolUse Hook - Compresses verbose tool output
  *
- * Compresses large tool results using type-specific strategies:
- * - File reads: Truncate long files, show first/last N lines
- * - Grep results: Group by file, show match count + samples
- * - Git diffs: Summarize file changes, show stats
- * - Build output: Extract errors/warnings only
+ * After tools like Bash, Read, Grep execute, this hook checks if
+ * the output is very large and adds a compressed summary as
+ * additionalContext so Claude can quickly reference key information.
  *
  * CRITICAL: Always exits 0 (never disrupts Claude Code).
- * Falls through unmodified on error or if already small.
  */
 
 import { appendFileSync } from 'node:fs';
@@ -17,414 +14,206 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { estimateTokens } from '../utils/tokenizer.js';
 
-// Debug logging (optional, set via env var)
 const DEBUG = process.env['SPARN_DEBUG'] === 'true';
 const LOG_FILE = process.env['SPARN_LOG_FILE'] || join(homedir(), '.sparn-hook.log');
+
+// Only add summaries for outputs over this many estimated tokens
+const SUMMARY_THRESHOLD = 3000;
 
 function log(message: string): void {
   if (DEBUG) {
     const timestamp = new Date().toISOString();
-    appendFileSync(LOG_FILE, `[${timestamp}] [post-tool-result] ${message}\n`);
+    appendFileSync(LOG_FILE, `[${timestamp}] [post-tool] ${message}\n`);
   }
 }
 
-// Exit 0 wrapper for all errors
-function exitSuccess(output: string): void {
-  process.stdout.write(output);
-  process.exit(0);
+interface HookInput {
+  session_id?: string;
+  hook_event_name?: string;
+  tool_name?: string;
+  tool_use_id?: string;
+  tool_input?: Record<string, unknown>;
+  tool_response?: unknown;
 }
 
-// Compression threshold (only compress if over this many tokens)
-const COMPRESSION_THRESHOLD = 5000;
-
-// Tool result patterns
-const TOOL_PATTERNS = {
-  fileRead: /<file_path>(.*?)<\/file_path>[\s\S]*?<content>([\s\S]*?)<\/content>/,
-  grepResult: /<pattern>(.*?)<\/pattern>[\s\S]*?<matches>([\s\S]*?)<\/matches>/,
-  gitDiff: /^diff --git/m,
-  buildOutput: /(error|warning|failed|failure)/i,
-  npmInstall: /^(npm|pnpm|yarn) (install|add|i)/m,
-  dockerLogs: /^\[?\d{4}-\d{2}-\d{2}/m,
-  testResults: /(PASS|FAIL|SKIP).*?\.test\./i,
-  typescriptErrors: /^.*\(\d+,\d+\): error TS\d+:/m,
-  webpackBuild: /webpack \d+\.\d+\.\d+/i,
-};
-
-/**
- * Compress file read results
- */
-function compressFileRead(content: string, maxLines = 100): string {
-  const lines = content.split('\n');
-
-  if (lines.length <= maxLines * 2) {
-    return content; // Already small enough
+function extractText(response: unknown): string {
+  if (typeof response === 'string') return response;
+  if (response && typeof response === 'object') {
+    return JSON.stringify(response);
   }
-
-  const head = lines.slice(0, maxLines);
-  const tail = lines.slice(-maxLines);
-  const omitted = lines.length - maxLines * 2;
-
-  return [...head, '', `... [${omitted} lines omitted] ...`, '', ...tail].join('\n');
+  return String(response ?? '');
 }
 
 /**
- * Compress grep results
+ * Summarize large bash output
  */
-function compressGrepResults(content: string, maxMatchesPerFile = 5): string {
-  const lines = content.split('\n');
-  const fileMatches = new Map<string, string[]>();
+function summarizeBash(text: string, command: string): string {
+  const lines = text.split('\n');
 
-  // Group matches by file
-  for (const line of lines) {
-    const match = line.match(/^(.*?):(\d+):(.*)/);
-    if (match?.[1] && match[2] && match[3]) {
-      const file = match[1];
-      const lineNum = match[2];
-      const text = match[3];
-      if (!fileMatches.has(file)) {
-        fileMatches.set(file, []);
-      }
-      fileMatches.get(file)?.push(`  Line ${lineNum}: ${text.trim()}`);
+  // Check for test results
+  if (/\d+ (pass|fail|skip)/i.test(text) || /Tests?:/i.test(text)) {
+    const resultLines = lines.filter(
+      (l) => /(pass|fail|skip|error|Tests?:|Test Suites?:)/i.test(l) || /^\s*(PASS|FAIL)\s/.test(l),
+    );
+    if (resultLines.length > 0) {
+      return `[sparn] Test output summary (${lines.length} lines):\n${resultLines.slice(0, 15).join('\n')}`;
     }
   }
 
-  // Build compressed output
-  const compressed: string[] = [];
-
-  for (const [file, matches] of fileMatches.entries()) {
-    compressed.push(`${file} (${matches.length} matches):`);
-
-    if (matches.length <= maxMatchesPerFile) {
-      compressed.push(...matches);
-    } else {
-      compressed.push(...matches.slice(0, maxMatchesPerFile));
-      compressed.push(`  ... and ${matches.length - maxMatchesPerFile} more matches`);
-    }
-
-    compressed.push('');
-  }
-
-  return compressed.join('\n');
-}
-
-/**
- * Compress git diff results
- */
-function compressGitDiff(content: string): string {
-  const lines = content.split('\n');
-  const files = new Map<string, { added: number; removed: number }>();
-  let currentFile = '';
-
-  for (const line of lines) {
-    if (line.startsWith('diff --git')) {
-      const match = line.match(/diff --git a\/(.*?) b\/(.*)/);
-      if (match) {
-        currentFile = match[2] || '';
-        files.set(currentFile, { added: 0, removed: 0 });
-      }
-    } else if (line.startsWith('+') && !line.startsWith('+++')) {
-      const stats = files.get(currentFile);
-      if (stats) stats.added++;
-    } else if (line.startsWith('-') && !line.startsWith('---')) {
-      const stats = files.get(currentFile);
-      if (stats) stats.removed++;
+  // Check for build errors
+  if (/(error|warning|failed)/i.test(text)) {
+    const errorLines = lines.filter((l) => /(error|warning|failed|fatal)/i.test(l));
+    if (errorLines.length > 0) {
+      return `[sparn] Build output summary (${errorLines.length} errors/warnings from ${lines.length} lines):\n${errorLines.slice(0, 10).join('\n')}`;
     }
   }
 
-  // Build summary
-  const summary: string[] = ['Git diff summary:'];
-
-  for (const [file, stats] of files.entries()) {
-    summary.push(`  ${file}: +${stats.added} -${stats.removed}`);
+  // Check for git diff
+  if (/^diff --git/m.test(text)) {
+    const files: string[] = [];
+    for (const line of lines) {
+      const match = line.match(/^diff --git a\/(.*?) b\/(.*)/);
+      if (match?.[2]) files.push(match[2]);
+    }
+    return `[sparn] Git diff: ${files.length} files changed: ${files.join(', ')}`;
   }
 
-  return summary.join('\n');
+  // Generic: show line count and first/last few lines
+  return `[sparn] Command \`${command}\` produced ${lines.length} lines of output. First 3: ${lines.slice(0, 3).join(' | ')}`;
 }
 
 /**
- * Compress build output (extract errors/warnings only)
+ * Summarize large file read
  */
-function compressBuildOutput(content: string): string {
-  const lines = content.split('\n');
-  const important: string[] = [];
+function summarizeFileRead(text: string, filePath: string): string {
+  const lines = text.split('\n');
+  const tokens = estimateTokens(text);
+
+  // Find key structures
+  const exports = lines.filter((l) => /^export\s/.test(l.trim()));
+  const functions = lines.filter((l) => /function\s+\w+/.test(l));
+  const classes = lines.filter((l) => /class\s+\w+/.test(l));
+
+  const parts = [`[sparn] File ${filePath}: ${lines.length} lines, ~${tokens} tokens.`];
+
+  if (exports.length > 0) {
+    parts.push(
+      `Exports: ${exports
+        .slice(0, 5)
+        .map((e) => e.trim().substring(0, 60))
+        .join('; ')}`,
+    );
+  }
+  if (functions.length > 0) {
+    parts.push(
+      `Functions: ${functions
+        .slice(0, 5)
+        .map((f) => f.trim().substring(0, 40))
+        .join(', ')}`,
+    );
+  }
+  if (classes.length > 0) {
+    parts.push(`Classes: ${classes.map((c) => c.trim().substring(0, 40)).join(', ')}`);
+  }
+
+  return parts.join(' ');
+}
+
+/**
+ * Summarize grep/search results
+ */
+function summarizeSearch(text: string, pattern: string): string {
+  const lines = text.split('\n').filter((l) => l.trim().length > 0);
+  const fileMap = new Map<string, number>();
 
   for (const line of lines) {
-    if (/(error|warning|failed|failure|fatal)/i.test(line)) {
-      important.push(line);
+    const match = line.match(/^(.*?):\d+:/);
+    if (match?.[1]) {
+      fileMap.set(match[1], (fileMap.get(match[1]) || 0) + 1);
     }
   }
 
-  if (important.length === 0) {
-    return 'Build output: No errors or warnings found';
+  if (fileMap.size > 0) {
+    const summary = Array.from(fileMap.entries())
+      .slice(0, 5)
+      .map(([f, c]) => `${f} (${c})`)
+      .join(', ');
+    return `[sparn] Search for "${pattern}": ${lines.length} matches across ${fileMap.size} files. Top files: ${summary}`;
   }
 
-  return ['Build errors/warnings:', ...important].join('\n');
+  return `[sparn] Search for "${pattern}": ${lines.length} result lines`;
 }
 
-/**
- * Compress npm/pnpm install output
- */
-function compressNpmInstall(content: string): string {
-  const lines = content.split('\n');
-  const summary: string[] = [];
-
-  // Extract package count and warnings/errors
-  const warnings: string[] = [];
-  const errors: string[] = [];
-
-  for (const line of lines) {
-    if (/added \d+ packages?/i.test(line)) {
-      summary.push(line.trim());
-    }
-    if (/warn/i.test(line)) {
-      warnings.push(line.trim());
-    }
-    if (/error/i.test(line)) {
-      errors.push(line.trim());
-    }
-  }
-
-  if (errors.length > 0) {
-    return ['Package installation errors:', ...errors.slice(0, 5)].join('\n');
-  }
-
-  if (warnings.length > 0) {
-    return [
-      'Package installation completed with warnings:',
-      ...warnings.slice(0, 3),
-      warnings.length > 3 ? `... and ${warnings.length - 3} more warnings` : '',
-    ]
-      .filter(Boolean)
-      .join('\n');
-  }
-
-  return summary.length > 0 ? summary.join('\n') : 'Package installation completed successfully';
-}
-
-/**
- * Compress Docker logs
- */
-function compressDockerLogs(content: string): string {
-  const lines = content.split('\n');
-  const logMap = new Map<string, number>();
-
-  // Deduplicate and count repeated lines
-  for (const line of lines) {
-    // Strip timestamps for deduplication
-    const normalized = line.replace(/^\[?\d{4}-\d{2}-\d{2}.*?\]\s*/, '').trim();
-    if (normalized) {
-      logMap.set(normalized, (logMap.get(normalized) || 0) + 1);
-    }
-  }
-
-  const summary: string[] = ['Docker logs (deduplicated):'];
-
-  for (const [log, count] of Array.from(logMap.entries()).slice(0, 20)) {
-    if (count > 1) {
-      summary.push(`  [${count}x] ${log}`);
-    } else {
-      summary.push(`  ${log}`);
-    }
-  }
-
-  if (logMap.size > 20) {
-    summary.push(`  ... and ${logMap.size - 20} more unique log lines`);
-  }
-
-  return summary.join('\n');
-}
-
-/**
- * Compress test results
- */
-function compressTestResults(content: string): string {
-  const lines = content.split('\n');
-  let passed = 0;
-  let failed = 0;
-  let skipped = 0;
-  const failures: string[] = [];
-
-  for (const line of lines) {
-    if (/PASS/i.test(line)) passed++;
-    if (/FAIL/i.test(line)) {
-      failed++;
-      failures.push(line.trim());
-    }
-    if (/SKIP/i.test(line)) skipped++;
-  }
-
-  const summary = [`Test Results: ${passed} passed, ${failed} failed, ${skipped} skipped`];
-
-  if (failures.length > 0) {
-    summary.push('', 'Failed tests:');
-    summary.push(...failures.slice(0, 10));
-    if (failures.length > 10) {
-      summary.push(`... and ${failures.length - 10} more failures`);
-    }
-  }
-
-  return summary.join('\n');
-}
-
-/**
- * Compress TypeScript errors
- */
-function compressTypescriptErrors(content: string): string {
-  const lines = content.split('\n');
-  const errorMap = new Map<string, string[]>();
-
-  for (const line of lines) {
-    const match = line.match(/^(.*?)\(\d+,\d+\): error (TS\d+):/);
-    if (match) {
-      const file = match[1] || 'unknown';
-      const errorCode = match[2] || 'TS0000';
-      const key = `${file}:${errorCode}`;
-
-      if (!errorMap.has(key)) {
-        errorMap.set(key, []);
-      }
-      errorMap.get(key)?.push(line);
-    }
-  }
-
-  const summary = ['TypeScript Errors (grouped by file):'];
-
-  for (const [key, errors] of errorMap.entries()) {
-    summary.push(`  ${key} (${errors.length} errors)`);
-    summary.push(`    ${errors[0]}`);
-  }
-
-  return summary.join('\n');
-}
-
-/**
- * Main compression logic
- */
-function compressToolResult(input: string): string {
-  const tokens = estimateTokens(input);
-  log(`Tool result tokens: ${tokens}`);
-
-  // Only compress if over threshold
-  if (tokens < COMPRESSION_THRESHOLD) {
-    log(`Under compression threshold (${tokens} < ${COMPRESSION_THRESHOLD}), passing through`);
-    return input;
-  }
-
-  log(`Over threshold! Compressing ${tokens} token tool result`);
-
-  // Detect tool result type and compress accordingly
-  if (TOOL_PATTERNS.fileRead.test(input)) {
-    log('Detected: File read');
-    const match = input.match(TOOL_PATTERNS.fileRead);
-    if (match?.[2]) {
-      const content = match[2];
-      const compressed = compressFileRead(content);
-      const afterTokens = estimateTokens(compressed);
-      log(`Compressed file read: ${tokens} → ${afterTokens} tokens`);
-      return input.replace(content, compressed);
-    }
-  }
-
-  if (TOOL_PATTERNS.grepResult.test(input)) {
-    log('Detected: Grep results');
-    const match = input.match(TOOL_PATTERNS.grepResult);
-    if (match?.[2]) {
-      const matches = match[2];
-      const compressed = compressGrepResults(matches);
-      const afterTokens = estimateTokens(compressed);
-      log(`Compressed grep: ${tokens} → ${afterTokens} tokens`);
-      return input.replace(matches, compressed);
-    }
-  }
-
-  if (TOOL_PATTERNS.gitDiff.test(input)) {
-    log('Detected: Git diff');
-    const compressed = compressGitDiff(input);
-    const afterTokens = estimateTokens(compressed);
-    log(`Compressed git diff: ${tokens} → ${afterTokens} tokens`);
-    return compressed;
-  }
-
-  if (TOOL_PATTERNS.buildOutput.test(input)) {
-    log('Detected: Build output');
-    const compressed = compressBuildOutput(input);
-    const afterTokens = estimateTokens(compressed);
-    log(`Compressed build: ${tokens} → ${afterTokens} tokens`);
-    return compressed;
-  }
-
-  if (TOOL_PATTERNS.npmInstall.test(input)) {
-    log('Detected: NPM install');
-    const compressed = compressNpmInstall(input);
-    const afterTokens = estimateTokens(compressed);
-    log(`Compressed npm: ${tokens} → ${afterTokens} tokens`);
-    return compressed;
-  }
-
-  if (TOOL_PATTERNS.dockerLogs.test(input)) {
-    log('Detected: Docker logs');
-    const compressed = compressDockerLogs(input);
-    const afterTokens = estimateTokens(compressed);
-    log(`Compressed docker: ${tokens} → ${afterTokens} tokens`);
-    return compressed;
-  }
-
-  if (TOOL_PATTERNS.testResults.test(input)) {
-    log('Detected: Test results');
-    const compressed = compressTestResults(input);
-    const afterTokens = estimateTokens(compressed);
-    log(`Compressed tests: ${tokens} → ${afterTokens} tokens`);
-    return compressed;
-  }
-
-  if (TOOL_PATTERNS.typescriptErrors.test(input)) {
-    log('Detected: TypeScript errors');
-    const compressed = compressTypescriptErrors(input);
-    const afterTokens = estimateTokens(compressed);
-    log(`Compressed TS errors: ${tokens} → ${afterTokens} tokens`);
-    return compressed;
-  }
-
-  // Unknown type or no compression pattern matched
-  log('No pattern matched, applying generic compression');
-  // Apply generic truncation as fallback
-  const lines = input.split('\n');
-  if (lines.length > 200) {
-    const compressed = compressFileRead(input, 100);
-    const afterTokens = estimateTokens(compressed);
-    log(`Generic compression: ${tokens} → ${afterTokens} tokens`);
-    return compressed;
-  }
-
-  log('No compression needed');
-  return input;
-}
-
-// Main hook logic
 async function main(): Promise<void> {
   try {
-    // Read stdin (tool result)
     const chunks: Buffer[] = [];
     for await (const chunk of process.stdin) {
       chunks.push(chunk);
     }
-    const input = Buffer.concat(chunks).toString('utf-8');
+    const raw = Buffer.concat(chunks).toString('utf-8');
 
-    // Compress if needed
-    const output = compressToolResult(input);
+    let input: HookInput;
+    try {
+      input = JSON.parse(raw);
+    } catch {
+      log('Failed to parse JSON input');
+      process.exit(0);
+      return;
+    }
 
-    exitSuccess(output);
+    const toolName = input.tool_name ?? 'unknown';
+    const text = extractText(input.tool_response);
+    const tokens = estimateTokens(text);
+
+    log(`Tool: ${toolName}, response tokens: ~${tokens}`);
+
+    if (tokens < SUMMARY_THRESHOLD) {
+      log('Under threshold, no summary needed');
+      process.exit(0);
+      return;
+    }
+
+    let summary = '';
+
+    switch (toolName) {
+      case 'Bash': {
+        const command = String(input.tool_input?.['command'] ?? '');
+        summary = summarizeBash(text, command);
+        break;
+      }
+      case 'Read': {
+        const filePath = String(input.tool_input?.['file_path'] ?? '');
+        summary = summarizeFileRead(text, filePath);
+        break;
+      }
+      case 'Grep': {
+        const pattern = String(input.tool_input?.['pattern'] ?? '');
+        summary = summarizeSearch(text, pattern);
+        break;
+      }
+      default: {
+        const lines = text.split('\n');
+        summary = `[sparn] ${toolName} output: ${lines.length} lines, ~${tokens} tokens`;
+        break;
+      }
+    }
+
+    if (summary) {
+      log(`Summary: ${summary.substring(0, 100)}`);
+      const output = JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: 'PostToolUse',
+          additionalContext: summary,
+        },
+      });
+      process.stdout.write(output);
+    }
+
+    process.exit(0);
   } catch (error) {
-    // On any error, pass through original input
-    log(`Error in post-tool-result hook: ${error instanceof Error ? error.message : String(error)}`);
-    const chunks: Buffer[] = [];
-    for await (const chunk of process.stdin) {
-      chunks.push(chunk);
-    }
-    const input = Buffer.concat(chunks).toString('utf-8');
-    exitSuccess(input);
+    log(`Error: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(0);
   }
 }
 
-// Run hook
 main();

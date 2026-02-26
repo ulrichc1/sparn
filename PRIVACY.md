@@ -218,7 +218,7 @@ To minimize privacy risks:
 
 ### Automatic Data Management
 
-Sparn uses **neuroscience-inspired decay** to automatically manage data:
+Sparn uses **time-based decay** to automatically manage data:
 
 1. **Time-to-Live (TTL)**: Entries have configurable lifespans
 2. **Engram Decay**: Scores decrease over time (like memory fading)

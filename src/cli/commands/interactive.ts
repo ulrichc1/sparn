@@ -89,9 +89,9 @@ async function configureWizard(configPath: string): Promise<void> {
   const section = await select({
     message: 'Which settings would you like to configure?',
     choices: [
-      { name: '🔪 Pruning (Sparse Coding)', value: 'pruning' },
-      { name: '⏳ Decay (Engram Theory)', value: 'decay' },
-      { name: '🎯 States (Multi-State Synapses)', value: 'states' },
+      { name: '🔪 Pruning (Relevance Filtering)', value: 'pruning' },
+      { name: '⏳ Decay (Time-Based)', value: 'decay' },
+      { name: '🎯 States (Entry Classification)', value: 'states' },
       { name: '⚡ Real-time Optimization', value: 'realtime' },
       { name: '🎨 UI Preferences', value: 'ui' },
       { name: '← Back to Main Menu', value: 'back' },
@@ -103,7 +103,7 @@ async function configureWizard(configPath: string): Promise<void> {
   switch (section) {
     case 'pruning': {
       console.log(synapseViolet('\n🔪 Pruning Configuration'));
-      console.log(dim('Sparse coding: Keep only the most relevant context\n'));
+      console.log(dim('Keep only the most relevant context\n'));
 
       const threshold = await number({
         message: 'Pruning threshold (percentage of entries to keep):',
@@ -128,7 +128,7 @@ async function configureWizard(configPath: string): Promise<void> {
 
     case 'decay': {
       console.log(synapseViolet('\n⏳ Decay Configuration'));
-      console.log(dim('Engram theory: Apply time-based decay to memories\n'));
+      console.log(dim('Apply time-based decay to older entries\n'));
 
       const defaultTTL = await number({
         message: 'Default TTL in hours:',
@@ -153,7 +153,7 @@ async function configureWizard(configPath: string): Promise<void> {
 
     case 'states': {
       console.log(synapseViolet('\n🎯 State Threshold Configuration'));
-      console.log(dim('Multi-state synapses: Classify entries as active/ready/silent\n'));
+      console.log(dim('Classify entries as active/ready/silent based on score\n'));
 
       const activeThreshold = await number({
         message: 'Active state threshold (0.0-1.0):',
@@ -538,7 +538,7 @@ It includes some sample content to demonstrate the optimization process.
 
 ## Features
 - Token counting
-- Sparse coding
+- Relevance filtering
 - Decay application
 - State classification
       `.trim();

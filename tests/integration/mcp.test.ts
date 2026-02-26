@@ -30,14 +30,15 @@ describe('MCP server integration', () => {
   });
 
   describe('tool listing', () => {
-    it('lists all three tools', async () => {
+    it('lists all four tools', async () => {
       const result = await client.listTools();
       const toolNames = result.tools.map((t) => t.name);
 
       expect(toolNames).toContain('sparn_optimize');
       expect(toolNames).toContain('sparn_stats');
       expect(toolNames).toContain('sparn_consolidate');
-      expect(result.tools.length).toBe(3);
+      expect(toolNames).toContain('sparn_search');
+      expect(result.tools.length).toBe(4);
     });
 
     it('each tool has a description', async () => {

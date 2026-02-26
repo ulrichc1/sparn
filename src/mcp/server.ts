@@ -1,13 +1,13 @@
 /**
  * Sparn MCP Server - Model Context Protocol server implementation
  *
- * Exposes Sparn's neuroscience-inspired context optimization as MCP tools,
- * enabling integration with Claude Desktop, VS Code, and other MCP clients.
+ * Exposes Sparn context optimization as MCP tools, enabling integration
+ * with Claude Desktop, VS Code, and other MCP clients.
  *
  * Tools:
  * - sparn_optimize: Optimize context with configurable options
  * - sparn_stats: Get optimization statistics
- * - sparn_consolidate: Run memory consolidation (sleep replay)
+ * - sparn_consolidate: Run memory consolidation
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -39,12 +39,13 @@ export function createSparnMcpServer(options: SparnMcpServerOptions): McpServer 
 
   const server = new McpServer({
     name: 'sparn',
-    version: '1.1.1',
+    version: '1.4.0',
   });
 
   registerOptimizeTool(server, memory, config);
   registerStatsTool(server, memory);
   registerConsolidateTool(server, memory);
+  registerSearchTool(server, memory);
 
   return server;
 }
@@ -52,8 +53,8 @@ export function createSparnMcpServer(options: SparnMcpServerOptions): McpServer 
 /**
  * Register the sparn_optimize tool.
  *
- * Optimizes input context using the neuroscience-inspired pipeline:
- * BTSP detection, engram scoring, confidence states, and sparse pruning.
+ * Optimizes input context using the multi-stage pipeline:
+ * critical event detection, relevance scoring, entry classification, and sparse pruning.
  */
 function registerOptimizeTool(server: McpServer, memory: KVMemory, config: SparnConfig): void {
   server.registerTool(
@@ -61,8 +62,8 @@ function registerOptimizeTool(server: McpServer, memory: KVMemory, config: Sparn
     {
       title: 'Sparn Optimize',
       description:
-        'Optimize context using neuroscience-inspired pruning. ' +
-        'Applies BTSP detection, engram scoring, confidence states, ' +
+        'Optimize context using multi-stage pruning. ' +
+        'Applies critical event detection, relevance scoring, entry classification, ' +
         'and sparse pruning to reduce token usage while preserving important information.',
       inputSchema: {
         context: z.string().describe('The context text to optimize'),
@@ -238,10 +239,75 @@ function registerStatsTool(server: McpServer, memory: KVMemory): void {
 }
 
 /**
+ * Register the sparn_search tool.
+ *
+ * Searches memory entries using FTS5 full-text search.
+ * Returns matching entries with score, state, and rank info.
+ */
+function registerSearchTool(server: McpServer, memory: KVMemory): void {
+  server.registerTool(
+    'sparn_search',
+    {
+      title: 'Sparn Search',
+      description:
+        'Search memory entries using full-text search. ' +
+        'Returns matching entries with relevance ranking, score, and state information.',
+      inputSchema: {
+        query: z.string().describe('Search query text'),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .default(10)
+          .describe('Maximum number of results (1-100, default 10)'),
+      },
+    },
+    async ({ query, limit }) => {
+      try {
+        const results = await memory.searchFTS(query, limit);
+
+        const response = results.map((r) => ({
+          id: r.entry.id,
+          content:
+            r.entry.content.length > 500 ? `${r.entry.content.slice(0, 500)}...` : r.entry.content,
+          score: r.entry.score,
+          state: r.entry.state,
+          rank: r.rank,
+          tags: r.entry.tags,
+          isBTSP: r.entry.isBTSP,
+        }));
+
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify({ results: response, total: response.length }, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify({ error: message }),
+            },
+          ],
+          isError: true,
+        };
+      }
+    },
+  );
+}
+
+/**
  * Register the sparn_consolidate tool.
  *
- * Runs the sleep-compressor consolidation process, which removes
- * decayed entries and merges duplicates in the memory store.
+ * Runs the consolidation process, which removes decayed entries
+ * and merges duplicates in the memory store.
  */
 function registerConsolidateTool(server: McpServer, memory: KVMemory): void {
   server.registerTool(
@@ -249,9 +315,8 @@ function registerConsolidateTool(server: McpServer, memory: KVMemory): void {
     {
       title: 'Sparn Consolidate',
       description:
-        'Run memory consolidation (sleep replay). ' +
-        'Removes decayed entries and merges duplicates to reclaim space. ' +
-        'Inspired by the neuroscience principle of sleep-based memory consolidation.',
+        'Run memory consolidation. ' +
+        'Removes decayed entries and merges duplicates to reclaim space.',
     },
     async () => {
       try {

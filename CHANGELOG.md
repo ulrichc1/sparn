@@ -5,6 +5,121 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-02-26
+
+### New Features
+
+#### TUI Dashboard
+- **Interactive Dashboard** (`sparn dashboard` / `sparn dash`): Full-screen React/Ink TUI
+  - Memory status panel with real-time stats
+  - Optimization metrics and history
+  - Dependency graph visualization
+  - Technical debt overview
+  - Command input with auto-complete
+  - Configurable refresh interval
+
+#### Audio Feedback
+- **Cross-platform sound effects**: Audio cues for CLI events
+  - Startup, command, complete, and end sounds
+  - Windows (PowerShell), macOS (`afplay`), Linux (`aplay`/`paplay`/`play`)
+  - Disable with `SPARN_AUDIO=false`
+
+#### New Hooks
+- **Dashboard Stats Hook**: Collects real-time metrics for the TUI dashboard
+- **Stop-Docs-Refresh Hook**: Prevents unnecessary CLAUDE.md regeneration
+
+### Testing
+
+- **479 tests passing** across 44 test files (up from 369)
+- New test suites for dashboard components, audio, adapters, and hooks
+
+### Technical
+
+- React/Ink dependency for TUI rendering
+- Cross-platform audio via `execFileSync` with platform detection
+- All existing tests continue to pass
+
+## [1.3.0] - 2026-02-24
+
+### New Features
+
+#### Codebase Intelligence
+- **Dependency Graph** (`sparn graph`): Analyze import/export relationships across your project
+  - Entry point tracing, hot path detection, orphan file identification
+  - Focus mode to zoom into specific modules
+  - JSON export for programmatic use
+- **Full-Text Search** (`sparn search`): FTS5 + ripgrep hybrid search engine
+  - Index your codebase and query across all files
+  - Ranked results with line numbers and context
+- **Workflow Planner** (`sparn plan/exec/verify`): Token-budgeted implementation plans
+  - Create step-by-step plans with estimated token costs
+  - Execute and verify plan completion
+  - Plan IDs sanitized for filesystem safety
+- **Docs Generator** (`sparn docs`): Auto-generate CLAUDE.md from project structure
+  - Detects entry points, scripts, dependencies, and conventions
+  - Optional dependency graph integration
+- **Technical Debt Tracker** (`sparn debt`): Track, prioritize, and resolve tech debt
+  - Severity levels (P0-P3) with token cost estimates
+  - Repayment date tracking and stats dashboard
+
+#### Shared TF-IDF Module
+- Extracted `tokenize()`, `calculateTF()`, `calculateIDF()`, `calculateTFIDF()` from 4 files into `src/utils/tfidf.ts`
+- Removed ~80 lines of duplicated code across sparse-pruner, budget-pruner, incremental-optimizer, sleep-compressor
+
+### Bug Fixes (Deep Audit)
+
+**Critical:**
+1. **Hooks wrong protocol** - Rewrote all hook files for Claude Code JSON I/O protocol
+2. **Command injection** - search-engine used `execSync` with string interpolation, changed to `execFileSync`
+3. **Path traversal** - workflow-planner `planPath()` now sanitizes IDs
+4. **Number.parseInt radix** - Commander callbacks passed previousValue as radix (4 fixes)
+
+**High:**
+5. **getVersion()** - Was reading user's package.json instead of sparn's own
+6. **DB leak** - search-engine `init()` didn't close previous connection
+7. **foreign_keys pragma** - kv-memory needed explicit `PRAGMA foreign_keys = ON`
+8. **compact() broken** - Wasn't actually removing expired entries
+9. **resolutionTokens nullish** - Changed `|| null` to `?? null` to preserve 0
+10. **verify() destroying plans** - No longer marks in-progress plans as failed
+
+**Medium:**
+11. **BTSP budget overflow** - Guard limits BTSP to 80% of budget
+12. **Double watchers** - session-watcher used single recursive watcher
+13. **Windows signals** - daemon-process handles Windows `process.kill` differently
+14. **Conversation boost lost** - claude-code adapter now preserves boost after decay
+15. **Unbounded cache** - incremental-optimizer evicts oldest 20% at 10K entries
+16. **Daemon metrics misleading** - `status()` no longer reports local process metrics
+
+**v1.3.0 Hardening Audit:**
+17. **Confidence state boundary** - `> 0.7` changed to `>= 0.7` for consistency across modules
+18. **Generic adapter duplicate BTSP** - `btsp.detectBTSP()` was called twice per entry
+19. **Generic adapter timestamps** - All entries shared same `Date.now()`, now unique
+20. **File tracker delta read** - Replaced `readFileSync` with `openSync/readSync/closeSync` for O(delta) reads
+21. **MCP server version** - Hardcoded `'1.1.1'` updated to `'1.3.0'`
+22. **CLI editor spawn** - Multi-word `$EDITOR` values (e.g. `"code --wait"`) now handled correctly
+23. **Resource leaks** - Added `try/finally` for `memory.close()` in 5 CLI commands
+24. **Session-watcher glob regex** - Fixed escaping order (`.` before `**`)
+25. **Overlapping consolidation** - Added guard to prevent concurrent consolidation runs
+26. **Cosine similarity perf** - Build frequency maps in single pass instead of O(n*v)
+27. **Metrics percentile perf** - Pre-sort durations once, reuse for P50/P95/P99
+28. **KV memory corruption** - Close db before backup/recovery attempt
+29. **Stats retention** - Limit optimization_stats to 1000 rows
+30. **Graph entry validation** - Error message when entry point not found in graph
+31. **Default maxDepth** - Capped at 50 instead of Infinity
+32. **Dead code cleanup** - Removed unused constants from claude-code adapter
+
+### Testing
+
+- **369 tests passing** across 35 test files (up from 230)
+- New test file `v130-fixes.test.ts` with 18 targeted tests for all audit fixes
+- All fix verification tests cover boundary conditions
+
+### Technical
+
+- 56 source files, lint clean, typecheck clean
+- Build produces 6 entry points (index, cli, daemon, hooks x2, mcp)
+- All hooks validated against real Claude Code protocol
+
 ## [1.2.2] - 2026-02-23
 
 ### 🐛 Critical Bug Fixes
@@ -93,7 +208,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Stats dashboard with multiple views (optimization history, realtime metrics, memory stats)
   - Interactive memory consolidation with confirmation prompts
   - Quick actions menu (reset stats, export config, test optimization)
-  - Branded terminal UI with neural cyan, synapse violet, and brain pink colors
+  - Branded terminal colors
   - 22 comprehensive integration tests
 
 #### Automated Consolidation Scheduler
@@ -175,9 +290,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Advanced Optimization Engine
 - **Budget-Aware Pruner**: Targets specific token counts instead of percentages
   - TF-IDF relevance scoring
-  - Engram decay integration
+  - Time-based decay integration
   - State multipliers (Active 2x, Ready 1x, Silent 0.5x)
-  - BTSP entries bypass budget constraints
+  - Critical entries bypass budget constraints
 
 - **Incremental Optimizer**: Lightning-fast delta processing
   - Content hash-based caching
@@ -275,12 +390,12 @@ Validated performance targets:
 ## [1.0.0] - 2026-01-14
 
 ### Added
-- Initial release with core neuroscience-inspired optimization
-- Sparse coding (keep top 2-5%)
-- Engram theory (exponential decay)
-- Multi-state synapses (active/ready/silent)
-- BTSP embedding (one-shot learning)
-- Sleep replay compression
+- Initial release with core context optimization
+- Relevance filtering (keep top 2-5%)
+- Time-based decay (exponential)
+- Entry classification (active/ready/silent)
+- Critical event detection (one-shot locking)
+- Periodic consolidation and compression
 - Claude Code adapter
 - CLI commands: init, optimize, stats, consolidate, relay, config
 - SQLite-based KV memory store

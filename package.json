@@ -1,8 +1,8 @@
 {
   "name": "@ulrichc1/sparn",
-  "version": "1.2.2",
+  "version": "1.4.0",
   "type": "module",
-  "description": "Neuroscience-inspired context optimization for AI coding agents",
+  "description": "Context optimization for AI coding agents — reduce token usage by 60-90%",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -34,14 +34,16 @@
     "typecheck": "tsc --noEmit",
     "mcp:server": "node dist/mcp/index.js",
     "validate": "node scripts/validate-quickstart.mjs",
+    "precommit": "npm run lint && npm run test",
     "prepublishOnly": "npm run typecheck && npm run lint && npm run test && npm run build"
   },
   "keywords": [
     "ai",
     "context",
     "optimization",
-    "neuroscience",
+    "context-window",
     "token",
+    "token-reduction",
     "pruning",
     "cli",
     "mcp"
@@ -67,8 +69,12 @@
     "chalk": "^5.6.2",
     "commander": "^14.0.3",
     "cosmiconfig": "^9.0.0",
+    "gpt-tokenizer": "^3.4.0",
+    "ink": "^5.2.1",
+    "ink-text-input": "^6.0.0",
     "js-yaml": "^4.1.1",
     "ora": "^9.3.0",
+    "react": "^18.3.1",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -76,6 +82,7 @@
     "@types/better-sqlite3": "^7.6.13",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.3.0",
+    "@types/react": "^18.3.28",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"

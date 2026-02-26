@@ -1,6 +1,6 @@
 /**
  * Sparse pruner types.
- * Implements sparse coding principle from neuroscience.
+ * Relevance filtering: keep only the most important entries.
  */
 
 import type { MemoryEntry } from './memory.js';

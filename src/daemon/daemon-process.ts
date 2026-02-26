@@ -8,11 +8,10 @@
  * - Daemon start/stop/status commands
  */
 
-import { fork } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getMetrics } from '../core/metrics.js';
 import type { SparnConfig } from '../types/config.js';
 
 export interface DaemonCommand {
@@ -120,20 +119,80 @@ export function createDaemonCommand(): DaemonCommand {
     }
 
     try {
-      // Fork child process (daemon entry point)
+      // Resolve daemon entry point path
+      // daemon-process.ts is bundled into dist/cli/index.js by tsup,
+      // so we navigate from dist/cli/ to dist/daemon/index.js
       const __filename = fileURLToPath(import.meta.url);
       const __dirname = dirname(__filename);
-      const daemonPath = join(__dirname, 'index.js');
+      const daemonPath = join(__dirname, '..', 'daemon', 'index.js');
+      const isWindows = process.platform === 'win32';
 
-      const child = fork(daemonPath, [], {
+      const childEnv = {
+        ...process.env,
+        SPARN_CONFIG: JSON.stringify(config),
+        SPARN_PID_FILE: pidFile,
+        SPARN_LOG_FILE: logFile,
+      };
+
+      // On Windows with Git Bash/MINGW, Node's detached:true doesn't
+      // survive parent exit. Write a launcher script and run it with
+      // PowerShell Start-Process which truly detaches.
+      if (isWindows) {
+        const configFile = join(dirname(pidFile), 'daemon-config.json');
+        writeFileSync(configFile, JSON.stringify({ config, pidFile, logFile }), 'utf-8');
+
+        // Create a tiny launcher script that sets env vars and runs the daemon
+        const launcherFile = join(dirname(pidFile), 'daemon-launcher.mjs');
+        const launcherCode = [
+          `import { readFileSync } from 'node:fs';`,
+          `const cfg = JSON.parse(readFileSync(${JSON.stringify(configFile)}, 'utf-8'));`,
+          `process.env.SPARN_CONFIG = JSON.stringify(cfg.config);`,
+          `process.env.SPARN_PID_FILE = cfg.pidFile;`,
+          `process.env.SPARN_LOG_FILE = cfg.logFile;`,
+          `await import(${JSON.stringify(`file:///${daemonPath.replace(/\\/g, '/')}`)});`,
+        ].join('\n');
+        writeFileSync(launcherFile, launcherCode, 'utf-8');
+
+        const ps = spawn(
+          'powershell.exe',
+          [
+            '-NoProfile',
+            '-WindowStyle',
+            'Hidden',
+            '-Command',
+            `Start-Process -FilePath '${process.execPath}' -ArgumentList '${launcherFile}' -WindowStyle Hidden`,
+          ],
+          { stdio: 'ignore', windowsHide: true },
+        );
+
+        ps.unref();
+
+        // Wait for daemon to write its own PID file
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        if (existsSync(pidFile)) {
+          const pid = Number.parseInt(readFileSync(pidFile, 'utf-8').trim(), 10);
+          if (!Number.isNaN(pid)) {
+            return {
+              success: true,
+              pid,
+              message: `Daemon started (PID ${pid})`,
+            };
+          }
+        }
+
+        return {
+          success: false,
+          message: 'Daemon failed to start (no PID file written)',
+          error: 'Timeout waiting for daemon PID',
+        };
+      }
+
+      // Unix: standard detached spawn
+      const child = spawn(process.execPath, [daemonPath], {
         detached: true,
         stdio: 'ignore',
-        env: {
-          ...process.env,
-          SPARN_CONFIG: JSON.stringify(config),
-          SPARN_PID_FILE: pidFile,
-          SPARN_LOG_FILE: logFile,
-        },
+        env: childEnv,
       });
 
       // Detach from parent
@@ -177,8 +236,16 @@ export function createDaemonCommand(): DaemonCommand {
     }
 
     try {
-      // Send SIGTERM
-      process.kill(status.pid, 'SIGTERM');
+      // On Windows, SIGTERM is not supported by process.kill - it terminates immediately.
+      // On Unix, SIGTERM allows graceful shutdown.
+      const isWindows = process.platform === 'win32';
+
+      if (isWindows) {
+        // Windows: process.kill with any signal terminates the process
+        process.kill(status.pid);
+      } else {
+        process.kill(status.pid, 'SIGTERM');
+      }
 
       // Wait for process to exit (timeout after 5s)
       const maxWait = 5000;
@@ -203,7 +270,9 @@ export function createDaemonCommand(): DaemonCommand {
 
       // Timeout, force kill
       try {
-        process.kill(status.pid, 'SIGKILL');
+        if (!isWindows) {
+          process.kill(status.pid, 'SIGKILL');
+        }
         removePidFile(pidFile);
         return {
           success: true,
@@ -237,15 +306,11 @@ export function createDaemonCommand(): DaemonCommand {
       };
     }
 
-    // Get metrics snapshot
-    const metrics = getMetrics().getSnapshot();
-
+    // Note: getMetrics() returns this process's metrics, not the daemon's.
+    // For accurate daemon metrics, we'd need IPC. For now, report basic status.
     return {
       running: true,
       pid: daemonStatus.pid,
-      uptime: metrics.daemon.uptime,
-      sessionsWatched: metrics.daemon.sessionsWatched,
-      tokensSaved: metrics.optimization.totalTokensSaved,
       message: `Daemon running (PID ${daemonStatus.pid})`,
     };
   }

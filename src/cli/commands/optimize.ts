@@ -1,5 +1,5 @@
 /**
- * Optimize Command - Apply neuroscience-inspired optimization to context
+ * Optimize Command - Apply multi-stage optimization to context
  */
 
 import { readFile, writeFile } from 'node:fs/promises';

@@ -1,24 +1,25 @@
 #!/usr/bin/env node
 /**
- * Pre-Prompt Hook - Claude Code hook for real-time context optimization
+ * UserPromptSubmit Hook - Fires before Claude processes the user's prompt
  *
- * Reads context from stdin, checks if tokens exceed threshold,
- * optimizes if needed, writes to stdout.
+ * Checks session transcript size and injects optimization hints when
+ * the context is getting large. Helps Claude stay focused in long sessions.
  *
  * CRITICAL: Always exits 0 (never disrupts Claude Code).
- * Falls through unmodified if under threshold or on error.
  */
 
-import { appendFileSync, existsSync, readFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
-import { load as parseYAML } from 'js-yaml';
-import { createBudgetPrunerFromConfig } from '../core/budget-pruner.js';
-import type { SparnConfig } from '../types/config.js';
-import { parseClaudeCodeContext } from '../utils/context-parser.js';
-import { estimateTokens } from '../utils/tokenizer.js';
+import { dirname, join, resolve } from 'node:path';
+import { formatDashboardStats } from './dashboard-stats.js';
 
-// Debug logging (optional, set via env var)
 const DEBUG = process.env['SPARN_DEBUG'] === 'true';
 const LOG_FILE = process.env['SPARN_LOG_FILE'] || join(homedir(), '.sparn-hook.log');
 
@@ -29,105 +30,125 @@ function log(message: string): void {
   }
 }
 
-// Exit 0 wrapper for all errors
-function exitSuccess(output: string): void {
-  process.stdout.write(output);
-  process.exit(0);
+interface HookInput {
+  session_id?: string;
+  transcript_path?: string;
+  cwd?: string;
+  hook_event_name?: string;
+  prompt?: string;
 }
 
-// Main hook logic
-async function main(): Promise<void> {
+const CACHE_FILE = join(homedir(), '.sparn', 'hook-state-cache.json');
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+interface CacheEntry {
+  key: string;
+  hint: string;
+  timestamp: number;
+}
+
+function getCacheKey(sessionId: string, size: number, mtimeMs: number): string {
+  return `${sessionId}:${size}:${Math.floor(mtimeMs)}`;
+}
+
+function readCache(key: string): string | null {
   try {
-    // Read stdin (context)
-    const chunks: Buffer[] = [];
-    for await (const chunk of process.stdin) {
-      chunks.push(chunk);
-    }
-    const input = Buffer.concat(chunks).toString('utf-8');
-
-    // Estimate tokens
-    const tokens = estimateTokens(input);
-    log(`Input tokens: ${tokens}`);
-
-    // Load config (check project dir first, then global)
-    const projectConfigPath = join(process.cwd(), '.sparn', 'config.yaml');
-    const globalConfigPath = join(homedir(), '.sparn', 'config.yaml');
-    let config: SparnConfig;
-    let configPath: string;
-
-    if (existsSync(projectConfigPath)) {
-      configPath = projectConfigPath;
-      log(`Using project config: ${configPath}`);
-    } else if (existsSync(globalConfigPath)) {
-      configPath = globalConfigPath;
-      log(`Using global config: ${configPath}`);
-    } else {
-      log('No config found, passing through');
-      exitSuccess(input);
-      return;
-    }
-
-    try {
-      const configYAML = readFileSync(configPath, 'utf-8');
-      config = parseYAML(configYAML) as SparnConfig;
-    } catch (err) {
-      log(`Config parse error: ${err}`);
-      exitSuccess(input);
-      return;
-    }
-
-    const { autoOptimizeThreshold, tokenBudget } = config.realtime;
-    log(`Threshold: ${autoOptimizeThreshold}, Budget: ${tokenBudget}`);
-
-    // Check if optimization needed
-    if (tokens < autoOptimizeThreshold) {
-      log(`Under threshold (${tokens} < ${autoOptimizeThreshold}), passing through`);
-      exitSuccess(input);
-      return;
-    }
-
-    log(`Over threshold! Optimizing ${tokens} tokens to fit ${tokenBudget} budget`);
-
-    // Parse context into entries
-    const entries = parseClaudeCodeContext(input);
-    log(`Parsed ${entries.length} context entries`);
-
-    if (entries.length === 0) {
-      log('No entries to optimize, passing through');
-      exitSuccess(input);
-      return;
-    }
-
-    // Create budget pruner
-    const pruner = createBudgetPrunerFromConfig(config.realtime, config.decay, config.states);
-
-    // Prune to fit budget
-    const result = pruner.pruneToFit(entries, tokenBudget);
-    const outputTokens = estimateTokens(result.kept.map((e) => e.content).join('\n\n'));
-    const saved = tokens - outputTokens;
-    const reduction = ((saved / tokens) * 100).toFixed(1);
-
-    log(`Optimization complete: ${tokens} → ${outputTokens} tokens (${reduction}% reduction)`);
-    log(`Kept ${result.kept.length}/${entries.length} entries`);
-
-    // Build optimized context (chronologically ordered)
-    const sorted = [...result.kept].sort((a, b) => a.timestamp - b.timestamp);
-    const optimizedContext = sorted.map((e) => e.content).join('\n\n');
-
-    // Output optimized context
-    exitSuccess(optimizedContext);
-  } catch (error) {
-    // On any error, pass through original input
-    log(`Error in pre-prompt hook: ${error instanceof Error ? error.message : String(error)}`);
-    // Read stdin again if needed (shouldn't happen, but safety fallback)
-    const chunks: Buffer[] = [];
-    for await (const chunk of process.stdin) {
-      chunks.push(chunk);
-    }
-    const input = Buffer.concat(chunks).toString('utf-8');
-    exitSuccess(input);
+    if (!existsSync(CACHE_FILE)) return null;
+    const data = JSON.parse(readFileSync(CACHE_FILE, 'utf-8')) as CacheEntry;
+    if (data.key !== key) return null;
+    if (Date.now() - data.timestamp > CACHE_TTL_MS) return null;
+    return data.hint;
+  } catch {
+    return null;
   }
 }
 
-// Run hook
+function writeCache(key: string, hint: string): void {
+  try {
+    const dir = dirname(CACHE_FILE);
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+    const entry: CacheEntry = { key, hint, timestamp: Date.now() };
+    writeFileSync(CACHE_FILE, JSON.stringify(entry), 'utf-8');
+  } catch {
+    // Fail silently — cache is best-effort
+  }
+}
+
+async function main(): Promise<void> {
+  try {
+    const chunks: Buffer[] = [];
+    for await (const chunk of process.stdin) {
+      chunks.push(chunk);
+    }
+    const raw = Buffer.concat(chunks).toString('utf-8');
+
+    let input: HookInput;
+    try {
+      input = JSON.parse(raw);
+    } catch {
+      log('Failed to parse JSON input, passing through');
+      process.exit(0);
+      return;
+    }
+
+    log(`Session: ${input.session_id}, prompt length: ${input.prompt?.length ?? 0}`);
+
+    // --- Dashboard stats (always attempted, not cached) ---
+    const cwd = input.cwd || process.cwd();
+    const dbPath = resolve(cwd, '.sparn/memory.db');
+    let dashboardStats: string | null = null;
+    try {
+      dashboardStats = formatDashboardStats(dbPath, cwd);
+      if (dashboardStats) {
+        log(`Dashboard stats: ${dashboardStats.split('\n').length} lines`);
+      }
+    } catch (err) {
+      log(`Dashboard stats error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    // --- Transcript size hint (cached) ---
+    let sizeHint: string | null = null;
+    const transcriptPath = input.transcript_path;
+    if (transcriptPath && existsSync(transcriptPath)) {
+      const stats = statSync(transcriptPath);
+      const sizeMB = stats.size / (1024 * 1024);
+      log(`Transcript size: ${sizeMB.toFixed(2)} MB`);
+
+      const cacheKey = getCacheKey(input.session_id || 'unknown', stats.size, stats.mtimeMs);
+      const cachedHint = readCache(cacheKey);
+      if (cachedHint) {
+        log('Cache hit for transcript hint');
+        sizeHint = cachedHint;
+      } else if (sizeMB > 2) {
+        sizeHint =
+          sizeMB > 5
+            ? `[sparn] Session transcript is ${sizeMB.toFixed(1)}MB. Context is very large. Prefer concise responses and avoid re-reading files already in context.`
+            : `[sparn] Session transcript is ${sizeMB.toFixed(1)}MB. Context is growing. Be concise where possible.`;
+        writeCache(cacheKey, sizeHint);
+        log(`Injecting optimization hint: ${sizeHint}`);
+      }
+    }
+
+    // --- Combine and output ---
+    const parts = [dashboardStats, sizeHint].filter(Boolean);
+    if (parts.length > 0) {
+      const combined = parts.join('\n');
+      const output = JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: 'UserPromptSubmit',
+          additionalContext: combined,
+        },
+      });
+      process.stdout.write(output);
+    }
+
+    process.exit(0);
+  } catch (error) {
+    log(`Error: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(0);
+  }
+}
+
 main();

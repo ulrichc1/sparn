@@ -12,6 +12,7 @@
 
 import type { MemoryEntry } from '../types/memory.js';
 import type { PruneResult } from '../types/pruner.js';
+import { tokenize } from '../utils/tfidf.js';
 import { estimateTokens } from '../utils/tokenizer.js';
 import { type BudgetPrunerConfig, createBudgetPruner } from './budget-pruner.js';
 import { getMetrics } from './metrics.js';
@@ -85,6 +86,19 @@ export interface IncrementalOptimizer {
     updateCount: number;
     lastFullOptimization: number;
   };
+
+  /**
+   * Serialize optimizer state to JSON string for persistence
+   * @returns JSON string of the state
+   */
+  serializeState(): string;
+
+  /**
+   * Deserialize optimizer state from JSON string
+   * @param json - JSON string to restore from
+   * @returns true if successful, false on error
+   */
+  deserializeState(json: string): boolean;
 }
 
 /**
@@ -106,13 +120,6 @@ export function createIncrementalOptimizer(
     updateCount: 0,
     lastFullOptimization: Date.now(),
   };
-
-  function tokenize(text: string): string[] {
-    return text
-      .toLowerCase()
-      .split(/\s+/)
-      .filter((word) => word.length > 0);
-  }
 
   /**
    * Update document frequency table incrementally
@@ -149,10 +156,27 @@ export function createIncrementalOptimizer(
     return cached.entry;
   }
 
+  /** Max cache entries to prevent unbounded growth */
+  const MAX_CACHE_SIZE = 10000;
+
   /**
    * Cache entry with score
    */
   function cacheEntry(entry: MemoryEntry, score: number): void {
+    // Evict oldest entries if cache is full
+    if (state.entryCache.size >= MAX_CACHE_SIZE) {
+      const entries = Array.from(state.entryCache.entries());
+      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+      // Remove oldest 20%
+      const toRemove = Math.floor(MAX_CACHE_SIZE * 0.2);
+      for (let i = 0; i < toRemove && i < entries.length; i++) {
+        const entry = entries[i];
+        if (entry) {
+          state.entryCache.delete(entry[0]);
+        }
+      }
+    }
+
     state.entryCache.set(entry.hash, {
       entry,
       score,
@@ -339,6 +363,33 @@ export function createIncrementalOptimizer(
     };
   }
 
+  function serializeState(): string {
+    const s = getState();
+    return JSON.stringify({
+      entryCache: Array.from(s.entryCache.entries()),
+      documentFrequency: Array.from(s.documentFrequency.entries()),
+      totalDocuments: s.totalDocuments,
+      updateCount: s.updateCount,
+      lastFullOptimization: s.lastFullOptimization,
+    });
+  }
+
+  function deserializeState(json: string): boolean {
+    try {
+      const parsed = JSON.parse(json);
+      restoreState({
+        entryCache: new Map(parsed.entryCache),
+        documentFrequency: new Map(parsed.documentFrequency),
+        totalDocuments: parsed.totalDocuments,
+        updateCount: parsed.updateCount,
+        lastFullOptimization: parsed.lastFullOptimization,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   return {
     optimizeIncremental,
     optimizeFull,
@@ -346,5 +397,7 @@ export function createIncrementalOptimizer(
     restoreState,
     reset,
     getStats,
+    serializeState,
+    deserializeState,
   };
 }

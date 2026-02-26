@@ -1,8 +1,8 @@
 /**
- * Engram Scorer - Implements engram theory (memory decay)
+ * Engram Scorer - Implements time-based memory decay
  *
- * Neuroscience: Memories fade over time without reinforcement.
- * Application: Apply exponential decay formula to memory scores based on age and access count.
+ * Older entries fade over time unless reinforced by access.
+ * Applies exponential decay formula to memory scores based on age and access count.
  *
  * Formula: decay = 1 - e^(-age/TTL)
  * Score adjustment: score_new = score_old * (1 - decay) + (accessCount bonus)
@@ -47,8 +47,12 @@ export interface EngramScorer {
  * @param config - Scorer configuration
  * @returns EngramScorer instance
  */
-export function createEngramScorer(config: EngramScorerConfig): EngramScorer {
+export function createEngramScorer(
+  config: EngramScorerConfig & { recencyBoostMinutes?: number; recencyBoostMultiplier?: number },
+): EngramScorer {
   const { defaultTTL } = config;
+  const recencyWindowMs = (config.recencyBoostMinutes ?? 30) * 60 * 1000;
+  const recencyMultiplier = config.recencyBoostMultiplier ?? 1.3;
 
   function calculateDecay(ageInSeconds: number, ttlInSeconds: number): number {
     if (ttlInSeconds === 0) return 1.0; // Instant decay
@@ -82,6 +86,15 @@ export function createEngramScorer(config: EngramScorerConfig): EngramScorer {
     // BTSP entries maintain high score
     if (entry.isBTSP) {
       score = Math.max(score, 0.9);
+    }
+
+    // Recency boost for non-BTSP entries within the recency window
+    if (!entry.isBTSP && recencyWindowMs > 0) {
+      const ageMs = currentTime - entry.timestamp;
+      if (ageMs >= 0 && ageMs < recencyWindowMs) {
+        const boostFactor = 1 + (recencyMultiplier - 1) * (1 - ageMs / recencyWindowMs);
+        score = score * boostFactor;
+      }
     }
 
     return Math.max(0, Math.min(1, score));

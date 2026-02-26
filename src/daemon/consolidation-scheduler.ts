@@ -92,6 +92,7 @@ export function createConsolidationScheduler(
   let lastRun: number | null = null;
   let lastResult: ConsolidationResult | null = null;
   let nextRun: number | null = null;
+  let isRunning = false;
 
   /**
    * Log helper
@@ -115,6 +116,12 @@ export function createConsolidationScheduler(
    * Run consolidation
    */
   async function runConsolidation(): Promise<void> {
+    if (isRunning) {
+      log('Consolidation already in progress, skipping');
+      return;
+    }
+
+    isRunning = true;
     const startTime = Date.now();
     log('Starting scheduled consolidation');
 
@@ -177,6 +184,8 @@ export function createConsolidationScheduler(
     if (intervalHours !== null && intervalHours > 0) {
       nextRun = Date.now() + intervalHours * 60 * 60 * 1000;
     }
+
+    isRunning = false;
   }
 
   function start(): void {

@@ -22,6 +22,12 @@ import { createKVMemory } from '../core/kv-memory.js';
 import { createSparnMcpServer } from './server.js';
 
 async function main(): Promise<void> {
+  // Enable precise token counting if configured
+  if (process.env['SPARN_PRECISE_TOKENS'] === 'true') {
+    const { setPreciseTokenCounting } = await import('../utils/tokenizer.js');
+    setPreciseTokenCounting(true);
+  }
+
   const dbPath = resolve(process.env['SPARN_DB_PATH'] ?? '.sparn/memory.db');
 
   // Ensure the database directory exists

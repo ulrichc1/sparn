@@ -1,26 +1,53 @@
 /**
  * Token estimation utilities.
- * Uses whitespace heuristic (~90% accuracy vs GPT tokenizer).
+ * Supports both heuristic (~90% accuracy) and precise (GPT tokenizer, ~95%+ accuracy) modes.
  */
 
+import { encode } from 'gpt-tokenizer';
+
+/** Module-level flag for precise token counting */
+let usePrecise = false;
+
 /**
- * Estimate token count for text using heuristic.
+ * Enable or disable precise token counting using GPT tokenizer.
+ * When enabled, estimateTokens() uses gpt-tokenizer for ~95%+ accuracy on code.
+ * When disabled (default), uses fast whitespace heuristic.
  *
- * Approximation: 1 token ≈ 4 chars or 0.75 words
- * Provides ~90% accuracy compared to GPT tokenizer, sufficient for optimization heuristics.
+ * @param enabled - Whether to use precise counting
+ */
+export function setPreciseTokenCounting(enabled: boolean): void {
+  usePrecise = enabled;
+}
+
+/**
+ * Count tokens precisely using GPT tokenizer.
+ *
+ * @param text - Text to count
+ * @returns Exact token count
+ */
+export function countTokensPrecise(text: string): number {
+  if (!text || text.length === 0) {
+    return 0;
+  }
+  return encode(text).length;
+}
+
+/**
+ * Estimate token count for text.
+ *
+ * In default (heuristic) mode: ~90% accuracy, very fast.
+ * In precise mode: ~95%+ accuracy using GPT tokenizer.
  *
  * @param text - Text to count
  * @returns Estimated token count
- *
- * @example
- * ```typescript
- * const tokens = estimateTokens('Hello world');
- * console.log(tokens); // ~2
- * ```
  */
 export function estimateTokens(text: string): number {
   if (!text || text.length === 0) {
     return 0;
+  }
+
+  if (usePrecise) {
+    return encode(text).length;
   }
 
   // Split on whitespace to get words

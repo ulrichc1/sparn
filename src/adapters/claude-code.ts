@@ -6,10 +6,10 @@
  */
 
 import { createBTSPEmbedder } from '../core/btsp-embedder.js';
+import { createBudgetPruner } from '../core/budget-pruner.js';
 import { createConfidenceStates } from '../core/confidence-states.js';
 import { createEngramScorer } from '../core/engram-scorer.js';
 import type { KVMemory } from '../core/kv-memory.js';
-import { createSparsePruner } from '../core/sparse-pruner.js';
 import type { AgentAdapter, OptimizationResult, OptimizeOptions } from '../types/adapter.js';
 import type { SparnConfig } from '../types/config.js';
 import { parseClaudeCodeContext } from '../utils/context-parser.js';
@@ -20,14 +20,8 @@ import { estimateTokens } from '../utils/tokenizer.js';
  * Tuned for Claude's conversation patterns and tool use
  */
 const CLAUDE_CODE_PROFILE = {
-  // More aggressive pruning for tool results (they can be verbose)
-  toolResultThreshold: 3, // Keep top 3% of tool results
-
   // Preserve conversation turns more aggressively
   conversationBoost: 1.5, // 50% boost for User/Assistant exchanges
-
-  // Prioritize recent context (Claude Code sessions are typically focused)
-  recentContextWindow: 10 * 60, // Last 10 minutes gets priority
 
   // BTSP patterns specific to Claude Code
   btspPatterns: [
@@ -59,13 +53,15 @@ const CLAUDE_CODE_PROFILE = {
  */
 export function createClaudeCodeAdapter(memory: KVMemory, config: SparnConfig): AgentAdapter {
   // Create core modules with Claude Code-optimized settings
-  const pruner = createSparsePruner({
-    threshold: config.pruning.threshold,
+  const pruner = createBudgetPruner({
+    tokenBudget: config.realtime.tokenBudget,
+    decay: config.decay,
+    states: config.states,
   });
 
   const scorer = createEngramScorer(config.decay);
   const states = createConfidenceStates(config.states);
-  const btsp = createBTSPEmbedder();
+  const btsp = createBTSPEmbedder({ customPatterns: config.btspPatterns });
 
   async function optimize(
     context: string,
@@ -112,12 +108,20 @@ export function createClaudeCodeAdapter(memory: KVMemory, config: SparnConfig): 
       return entry;
     });
 
-    // Score entries with decay
+    // Score entries with decay, preserving conversation boost
     const scoredEntries = boostedEntries.map((entry) => {
       const decayScore = scorer.calculateScore(entry);
+      const isConversationTurn =
+        entry.content.trim().startsWith('User:') || entry.content.trim().startsWith('Assistant:');
+
+      // For conversation turns, apply boost on top of decay score instead of losing it
+      const finalScore = isConversationTurn
+        ? Math.min(1.0, decayScore * CLAUDE_CODE_PROFILE.conversationBoost)
+        : decayScore;
+
       return {
         ...entry,
-        score: decayScore,
+        score: finalScore,
       };
     });
 
@@ -130,8 +134,8 @@ export function createClaudeCodeAdapter(memory: KVMemory, config: SparnConfig): 
       };
     });
 
-    // Prune entries (keep top N%)
-    const pruneResult = pruner.prune(entriesWithStates);
+    // Prune entries to fit within token budget
+    const pruneResult = pruner.pruneToFit(entriesWithStates);
 
     // Store kept entries in memory (if not dry-run)
     if (!options.dryRun) {

@@ -27,6 +27,12 @@ export interface DecayConfig {
 
   /** Decay threshold for pruning (0.0-1.0, default: 0.95) */
   decayThreshold: number;
+
+  /** Minutes within which entries get a recency boost (default: 30) */
+  recencyBoostMinutes?: number;
+
+  /** Multiplier for recency boost at age 0 (default: 1.3) */
+  recencyBoostMultiplier?: number;
 }
 
 /**
@@ -84,6 +90,9 @@ export interface RealtimeConfig {
 
   /** Consolidation interval in hours, or null for disabled (default: null) */
   consolidationInterval: number | null;
+
+  /** Use precise GPT tokenizer for token counting (default: false) */
+  preciseTokenCounting?: boolean;
 }
 
 /**
@@ -99,6 +108,8 @@ export interface SparnConfig {
   autoConsolidate: number | null;
   /** Real-time optimization settings */
   realtime: RealtimeConfig;
+  /** Additional BTSP pattern regex strings (default: []) */
+  btspPatterns?: string[];
 }
 
 /**

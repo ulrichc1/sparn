@@ -1,12 +1,13 @@
 /**
- * Sparse Pruner - Implements sparse coding principle
+ * Sparse Pruner - Relevance filtering
  *
- * Neuroscience: Only 2-5% of neurons fire at any given time.
- * Application: Keep only top 5% most relevant context entries by TF-IDF score.
+ * Keeps only the top 2-5% most relevant context entries by TF-IDF score.
+ * Low-scoring entries are pruned to reduce token usage.
  */
 
 import type { MemoryEntry } from '../types/memory.js';
 import type { PruneResult } from '../types/pruner.js';
+import { createTFIDFIndex, scoreTFIDF } from '../utils/tfidf.js';
 import { estimateTokens } from '../utils/tokenizer.js';
 
 export interface SparsePrunerConfig {
@@ -39,46 +40,8 @@ export interface SparsePruner {
 export function createSparsePruner(config: SparsePrunerConfig): SparsePruner {
   const { threshold } = config;
 
-  function tokenize(text: string): string[] {
-    return text
-      .toLowerCase()
-      .split(/\s+/)
-      .filter((word) => word.length > 0);
-  }
-
-  function calculateTF(term: string, tokens: string[]): number {
-    const count = tokens.filter((t) => t === term).length;
-    // Sqrt capping to prevent common words from dominating
-    return Math.sqrt(count);
-  }
-
-  function calculateIDF(term: string, allEntries: MemoryEntry[]): number {
-    const totalDocs = allEntries.length;
-    const docsWithTerm = allEntries.filter((entry) => {
-      const tokens = tokenize(entry.content);
-      return tokens.includes(term);
-    }).length;
-
-    if (docsWithTerm === 0) return 0;
-
-    return Math.log(totalDocs / docsWithTerm);
-  }
-
   function scoreEntry(entry: MemoryEntry, allEntries: MemoryEntry[]): number {
-    const tokens = tokenize(entry.content);
-    if (tokens.length === 0) return 0;
-
-    const uniqueTerms = [...new Set(tokens)];
-    let totalScore = 0;
-
-    for (const term of uniqueTerms) {
-      const tf = calculateTF(term, tokens);
-      const idf = calculateIDF(term, allEntries);
-      totalScore += tf * idf;
-    }
-
-    // Normalize by entry length
-    return totalScore / tokens.length;
+    return scoreTFIDF(entry, createTFIDFIndex(allEntries));
   }
 
   function prune(entries: MemoryEntry[]): PruneResult {
@@ -94,10 +57,13 @@ export function createSparsePruner(config: SparsePrunerConfig): SparsePruner {
     // Calculate original token count
     const originalTokens = entries.reduce((sum, e) => sum + estimateTokens(e.content), 0);
 
-    // Score all entries
+    // Build TF-IDF index once for all entries
+    const tfidfIndex = createTFIDFIndex(entries);
+
+    // Score all entries using pre-computed index
     const scored = entries.map((entry) => ({
       entry,
-      score: scoreEntry(entry, entries),
+      score: scoreTFIDF(entry, tfidfIndex),
     }));
 
     // Sort by score descending

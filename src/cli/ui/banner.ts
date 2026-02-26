@@ -19,7 +19,7 @@ export const BANNER = `
 /**
  * Tagline for banner.
  */
-export const TAGLINE = '🧠 Neuroscience-inspired context optimization';
+export const TAGLINE = '🧠 Context optimization for AI coding agents';
 
 /**
  * Get formatted banner with color.

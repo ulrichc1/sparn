@@ -1,7 +1,7 @@
 /**
  * KV Memory Store Module
- * Implements hippocampal key-value storage with dual index/value tables.
- * Maps to: Hippocampal Key-Value — the hippocampus separates what to store from how to retrieve it.
+ * Key-value storage with dual index/value tables.
+ * Separates what to store (content) from how to retrieve it (index with scores and state).
  */
 
 import { copyFileSync, existsSync } from 'node:fs';
@@ -23,6 +23,14 @@ export interface OptimizationStats {
 /**
  * KV Memory interface.
  */
+/**
+ * FTS5 search result with rank score.
+ */
+export interface FTSResult {
+  entry: MemoryEntry;
+  rank: number;
+}
+
 export interface KVMemory {
   /** Store a memory entry */
   put(entry: MemoryEntry): Promise<void>;
@@ -53,6 +61,9 @@ export interface KVMemory {
 
   /** Clear all optimization statistics */
   clearOptimizationStats(): Promise<void>;
+
+  /** Full-text search using FTS5 */
+  searchFTS(query: string, limit?: number): Promise<FTSResult[]>;
 }
 
 /**
@@ -95,6 +106,9 @@ export async function createKVMemory(dbPath: string): Promise<KVMemory> {
     if (integrityCheck !== 'ok') {
       console.error('⚠ Database corruption detected!');
 
+      // Close corrupted db before backup/recovery
+      db.close();
+
       // Create backup before attempting recovery
       if (existsSync(dbPath)) {
         const backupPath = createBackup(dbPath);
@@ -105,7 +119,6 @@ export async function createKVMemory(dbPath: string): Promise<KVMemory> {
 
       // Try to recover
       console.log('Attempting database recovery...');
-      db.close();
       db = new Database(dbPath);
     }
   } catch (error) {
@@ -122,6 +135,9 @@ export async function createKVMemory(dbPath: string): Promise<KVMemory> {
 
   // Enable WAL mode for better concurrency
   db.pragma('journal_mode = WAL');
+
+  // Enable foreign key enforcement (SQLite disables by default)
+  db.pragma('foreign_keys = ON');
 
   // Create entries_index table
   db.exec(`
@@ -168,6 +184,45 @@ export async function createKVMemory(dbPath: string): Promise<KVMemory> {
     CREATE INDEX IF NOT EXISTS idx_entries_hash ON entries_index(hash);
     CREATE INDEX IF NOT EXISTS idx_entries_timestamp ON entries_index(timestamp DESC);
     CREATE INDEX IF NOT EXISTS idx_stats_timestamp ON optimization_stats(timestamp DESC);
+  `);
+
+  // Create FTS5 virtual table for full-text search
+  db.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS entries_fts USING fts5(id, content, tokenize='porter');
+  `);
+
+  // Create triggers to keep FTS in sync
+  // Note: triggers use INSERT OR REPLACE pattern since FTS5 doesn't support UPSERT
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS entries_fts_insert
+    AFTER INSERT ON entries_value
+    BEGIN
+      INSERT OR REPLACE INTO entries_fts(id, content) VALUES (NEW.id, NEW.content);
+    END;
+  `);
+
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS entries_fts_delete
+    AFTER DELETE ON entries_value
+    BEGIN
+      DELETE FROM entries_fts WHERE id = OLD.id;
+    END;
+  `);
+
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS entries_fts_update
+    AFTER UPDATE ON entries_value
+    BEGIN
+      DELETE FROM entries_fts WHERE id = OLD.id;
+      INSERT INTO entries_fts(id, content) VALUES (NEW.id, NEW.content);
+    END;
+  `);
+
+  // Backfill existing data into FTS table
+  db.exec(`
+    INSERT OR IGNORE INTO entries_fts(id, content)
+    SELECT id, content FROM entries_value
+    WHERE id NOT IN (SELECT id FROM entries_fts);
   `);
 
   // Prepare statements for better performance
@@ -288,16 +343,23 @@ export async function createKVMemory(dbPath: string): Promise<KVMemory> {
         params.push(filters.isBTSP ? 1 : 0);
       }
 
+      if (filters.tags && filters.tags.length > 0) {
+        for (const tag of filters.tags) {
+          sql += ' AND v.tags LIKE ?';
+          params.push(`%"${tag}"%`);
+        }
+      }
+
       sql += ' ORDER BY i.score DESC';
 
       if (filters.limit) {
         sql += ' LIMIT ?';
         params.push(filters.limit);
-      }
 
-      if (filters.offset) {
-        sql += ' OFFSET ?';
-        params.push(filters.offset);
+        if (filters.offset) {
+          sql += ' OFFSET ?';
+          params.push(filters.offset);
+        }
       }
 
       const stmt = db.prepare(sql);
@@ -354,8 +416,32 @@ export async function createKVMemory(dbPath: string): Promise<KVMemory> {
         count: number;
       };
 
-      // Remove fully decayed entries (this will be enhanced in sleep-compressor)
-      db.exec('DELETE FROM entries_index WHERE ttl <= 0');
+      // Remove expired non-BTSP entries: timestamp (ms) + ttl (seconds)*1000 < now
+      const now = Date.now();
+      db.prepare('DELETE FROM entries_index WHERE isBTSP = 0 AND (timestamp + ttl * 1000) < ?').run(
+        now,
+      );
+
+      // Also remove non-BTSP entries with zero TTL
+      db.exec('DELETE FROM entries_index WHERE isBTSP = 0 AND ttl <= 0');
+
+      // Decay-based removal: remove non-BTSP entries with decay >= 0.95
+      const candidates = db
+        .prepare('SELECT id, timestamp, ttl FROM entries_index WHERE isBTSP = 0')
+        .all() as Array<{ id: string; timestamp: number; ttl: number }>;
+
+      for (const row of candidates) {
+        const ageSeconds = Math.max(0, (now - row.timestamp) / 1000);
+        const ttlSeconds = row.ttl;
+        if (ttlSeconds <= 0) continue;
+        const decay = 1 - Math.exp(-ageSeconds / ttlSeconds);
+        if (decay >= 0.95) {
+          db.prepare('DELETE FROM entries_index WHERE id = ?').run(row.id);
+        }
+      }
+
+      // Clean up orphaned value entries
+      db.exec('DELETE FROM entries_value WHERE id NOT IN (SELECT id FROM entries_index)');
 
       db.exec('VACUUM');
 
@@ -383,6 +469,11 @@ export async function createKVMemory(dbPath: string): Promise<KVMemory> {
         stats.entries_pruned,
         stats.duration_ms,
       );
+
+      // Retain only last 1000 stats to prevent unbounded growth
+      db.prepare(
+        'DELETE FROM optimization_stats WHERE id NOT IN (SELECT id FROM optimization_stats ORDER BY timestamp DESC LIMIT 1000)',
+      ).run();
     },
 
     async getOptimizationStats(): Promise<OptimizationStats[]> {
@@ -398,6 +489,64 @@ export async function createKVMemory(dbPath: string): Promise<KVMemory> {
 
     async clearOptimizationStats(): Promise<void> {
       db.exec('DELETE FROM optimization_stats');
+    },
+
+    async searchFTS(query: string, limit = 10): Promise<FTSResult[]> {
+      if (!query || query.trim().length === 0) return [];
+
+      // Sanitize query: strip FTS5 special characters to prevent syntax errors
+      const sanitized = query.replace(/[{}()[\]"':*^~]/g, ' ').trim();
+      if (sanitized.length === 0) return [];
+
+      const stmt = db.prepare(`
+        SELECT
+          f.id, f.content, rank,
+          i.hash, i.timestamp, i.score, i.ttl, i.state, i.accessCount, i.isBTSP,
+          v.tags, v.metadata
+        FROM entries_fts f
+        JOIN entries_index i ON f.id = i.id
+        JOIN entries_value v ON f.id = v.id
+        WHERE entries_fts MATCH ?
+        ORDER BY rank
+        LIMIT ?
+      `);
+
+      try {
+        const rows = stmt.all(sanitized, limit) as Array<{
+          id: string;
+          content: string;
+          rank: number;
+          hash: string;
+          timestamp: number;
+          score: number;
+          ttl: number;
+          state: string;
+          accessCount: number;
+          isBTSP: number;
+          tags: string | null;
+          metadata: string | null;
+        }>;
+
+        return rows.map((r) => ({
+          entry: {
+            id: r.id,
+            content: r.content,
+            hash: r.hash,
+            timestamp: r.timestamp,
+            score: r.score,
+            ttl: r.ttl,
+            state: r.state as 'silent' | 'ready' | 'active',
+            accessCount: r.accessCount,
+            tags: r.tags ? JSON.parse(r.tags) : [],
+            metadata: r.metadata ? JSON.parse(r.metadata) : {},
+            isBTSP: r.isBTSP === 1,
+          },
+          rank: r.rank,
+        }));
+      } catch {
+        // FTS query error (bad syntax despite sanitization) — return empty
+        return [];
+      }
     },
   };
 }

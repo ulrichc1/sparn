@@ -5,16 +5,26 @@
  * It runs the session watcher and handles cleanup on exit.
  */
 
-import { appendFileSync, existsSync, unlinkSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { createKVMemory } from '../core/kv-memory.js';
 import type { SparnConfig } from '../types/config.js';
+import { setPreciseTokenCounting } from '../utils/tokenizer.js';
 import { createConsolidationScheduler } from './consolidation-scheduler.js';
 import { createSessionWatcher } from './session-watcher.js';
 
-// Parse config from environment
-const configJson = process.env['SPARN_CONFIG'];
-const pidFile = process.env['SPARN_PID_FILE'];
-const logFile = process.env['SPARN_LOG_FILE'];
+// Parse config from environment or config file
+let configJson = process.env['SPARN_CONFIG'];
+let pidFile = process.env['SPARN_PID_FILE'];
+let logFile = process.env['SPARN_LOG_FILE'];
+
+// On Windows, env vars may not survive process detachment - read from config file
+const configFilePath = process.env['SPARN_CONFIG_FILE'];
+if ((!configJson || !pidFile || !logFile) && configFilePath && existsSync(configFilePath)) {
+  const fileConfig = JSON.parse(readFileSync(configFilePath, 'utf-8'));
+  configJson = configJson || JSON.stringify(fileConfig.config);
+  pidFile = pidFile || fileConfig.pidFile;
+  logFile = logFile || fileConfig.logFile;
+}
 
 if (!configJson || !pidFile || !logFile) {
   console.error('Daemon: Missing required environment variables');
@@ -22,6 +32,14 @@ if (!configJson || !pidFile || !logFile) {
 }
 
 const config: SparnConfig = JSON.parse(configJson);
+
+// Enable precise token counting if configured
+if (config.realtime?.preciseTokenCounting) {
+  setPreciseTokenCounting(true);
+}
+
+// Write our own PID so the parent can find us
+writeFileSync(pidFile, String(process.pid), 'utf-8');
 
 // Log helper
 function log(message: string): void {
@@ -141,7 +159,14 @@ watcher
     cleanup();
   });
 
-// Keep process alive
+// Keep process alive - setInterval keeps the event loop active
 setInterval(() => {
-  // Heartbeat (could be used for health checks)
-}, 60000); // Every minute
+  // Heartbeat - keep event loop active
+}, 30000);
+
+// On Windows, detached processes may need an additional active handle
+try {
+  process.stdin.resume();
+} catch {
+  // Ignore if stdin is unavailable (detached mode)
+}

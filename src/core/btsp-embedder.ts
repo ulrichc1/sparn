@@ -1,7 +1,6 @@
 /**
  * BTSP Embedder - Implements behavioral timescale synaptic plasticity
  *
- * Neuroscience: One-shot learning from critical events (errors, conflicts).
  * Application: Detect high-importance patterns and mark for permanent retention.
  */
 
@@ -35,9 +34,14 @@ export interface BTSPEmbedder {
  * Create a BTSP embedder instance
  * @returns BTSPEmbedder instance
  */
-export function createBTSPEmbedder(): BTSPEmbedder {
+export interface BTSPEmbedderConfig {
+  /** Additional regex pattern strings to detect BTSP events */
+  customPatterns?: string[];
+}
+
+export function createBTSPEmbedder(config?: BTSPEmbedderConfig): BTSPEmbedder {
   // Patterns that indicate critical events
-  const BTSP_PATTERNS = [
+  const BTSP_PATTERNS: RegExp[] = [
     // Error patterns
     /\b(error|exception|failure|fatal|critical|panic)\b/i,
     /\b(TypeError|ReferenceError|SyntaxError|RangeError|URIError)\b/,
@@ -56,6 +60,17 @@ export function createBTSPEmbedder(): BTSPEmbedder {
     /^=======/m,
     /^>>>>>>> /m,
   ];
+
+  // Merge custom patterns (silently skip invalid regex)
+  if (config?.customPatterns) {
+    for (const pattern of config.customPatterns) {
+      try {
+        BTSP_PATTERNS.push(new RegExp(pattern));
+      } catch {
+        // Invalid regex — silently ignore
+      }
+    }
+  }
 
   function detectBTSP(content: string): boolean {
     return BTSP_PATTERNS.some((pattern) => pattern.test(content));

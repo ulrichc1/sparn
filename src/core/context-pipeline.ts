@@ -43,6 +43,18 @@ export interface ContextPipelineStats {
 
 export interface ContextPipeline {
   /**
+   * Serialize optimizer state for persistence
+   * @returns JSON string of the optimizer state
+   */
+  serializeOptimizerState(): string;
+
+  /**
+   * Restore optimizer state from persistence
+   * @param json - JSON string to restore from
+   * @returns true if successful
+   */
+  deserializeOptimizerState(json: string): boolean;
+  /**
    * Ingest new content into the pipeline
    * @param content - Raw content string
    * @param metadata - Optional metadata to attach to entries
@@ -110,12 +122,33 @@ export function createContextPipeline(config: ContextPipelineConfig): ContextPip
     currentEntries = result.kept;
     budgetUtilization = result.budgetUtilization;
 
-    // Enforce window size limit (keep most recent if exceeded)
+    // Enforce window size limit using hybrid scoring
     if (currentEntries.length > windowSize) {
-      // Sort by timestamp descending (newest first)
-      const sorted = [...currentEntries].sort((a, b) => b.timestamp - a.timestamp);
-      const toKeep = sorted.slice(0, windowSize);
-      const toRemove = sorted.slice(windowSize);
+      // Calculate hybrid eviction score: ageNormalized * 0.4 + score * 0.6
+      const timestamps = currentEntries.map((e) => e.timestamp);
+      const minTs = Math.min(...timestamps);
+      const maxTs = Math.max(...timestamps);
+      const tsRange = maxTs - minTs || 1;
+
+      const scored = currentEntries.map((entry) => {
+        // BTSP entries always survive
+        if (entry.isBTSP) return { entry, hybridScore: 2.0 };
+
+        // ageNormalized: 1.0 = newest, 0.0 = oldest
+        const ageNormalized = (entry.timestamp - minTs) / tsRange;
+        const hybridScore = ageNormalized * 0.4 + entry.score * 0.6;
+        return { entry, hybridScore };
+      });
+
+      // Sort by hybrid score descending (highest = keep)
+      scored.sort((a, b) => {
+        if (b.hybridScore !== a.hybridScore) return b.hybridScore - a.hybridScore;
+        // Tiebreak: newer entries first
+        return b.entry.timestamp - a.entry.timestamp;
+      });
+
+      const toKeep = scored.slice(0, windowSize).map((s) => s.entry);
+      const toRemove = scored.slice(windowSize);
 
       currentEntries = toKeep;
       evictedEntries += toRemove.length;
@@ -161,7 +194,17 @@ export function createContextPipeline(config: ContextPipelineConfig): ContextPip
     optimizer.reset();
   }
 
+  function serializeOptimizerState(): string {
+    return optimizer.serializeState();
+  }
+
+  function deserializeOptimizerState(json: string): boolean {
+    return optimizer.deserializeState(json);
+  }
+
   return {
+    serializeOptimizerState,
+    deserializeOptimizerState,
     ingest,
     getContext,
     getEntries,

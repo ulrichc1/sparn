@@ -29,6 +29,6 @@
     }
   },
   "files": {
-    "includes": ["**", "!**/node_modules", "!**/dist", "!**/.sparn", "!**/*.log"]
+    "includes": ["**", "!**/node_modules", "!**/dist", "!**/.sparn", "!**/.claude", "!**/*.log"]
   }
 }

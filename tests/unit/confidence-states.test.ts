@@ -31,8 +31,8 @@ describe('ConfidenceStates', () => {
     expect(newState).toBe('silent');
   });
 
-  it("returns 'ready' for score 0.3-0.7", () => {
-    const testCases = [0.3, 0.5, 0.7];
+  it("returns 'ready' for score 0.3 to <0.7", () => {
+    const testCases = [0.3, 0.5, 0.69];
 
     for (const score of testCases) {
       const entry: MemoryEntry = {
@@ -54,23 +54,25 @@ describe('ConfidenceStates', () => {
     }
   });
 
-  it("returns 'active' for score >0.7", () => {
-    const entry: MemoryEntry = {
-      id: 'test',
-      content: 'test',
-      hash: 'hash',
-      timestamp: Date.now(),
-      score: 0.9,
-      ttl: 3600,
-      state: 'silent',
-      accessCount: 0,
-      tags: [],
-      metadata: {},
-      isBTSP: false,
-    };
+  it("returns 'active' for score >=0.7", () => {
+    for (const score of [0.7, 0.9, 1.0]) {
+      const entry: MemoryEntry = {
+        id: 'test',
+        content: 'test',
+        hash: 'hash',
+        timestamp: Date.now(),
+        score,
+        ttl: 3600,
+        state: 'silent',
+        accessCount: 0,
+        tags: [],
+        metadata: {},
+        isBTSP: false,
+      };
 
-    const newState = states.calculateState(entry);
-    expect(newState).toBe('active');
+      const newState = states.calculateState(entry);
+      expect(newState).toBe('active');
+    }
   });
 
   it("returns 'active' for isBTSP=true regardless of score", () => {

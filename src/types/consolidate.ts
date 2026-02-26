@@ -1,6 +1,6 @@
 /**
  * Sleep compressor (consolidation) types.
- * Implements sleep replay principle from neuroscience.
+ * Periodic consolidation removes decayed entries and merges duplicates.
  */
 
 import type { MemoryEntry } from './memory.js';

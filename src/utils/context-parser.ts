@@ -23,6 +23,14 @@ export type BlockType = 'conversation' | 'tool' | 'result' | 'other';
  * @returns Array of memory entries
  */
 export function parseClaudeCodeContext(context: string): MemoryEntry[] {
+  // Auto-detect JSONL format: check if first non-empty line starts with '{'
+  const firstNonEmpty = context.split('\n').find((line) => line.trim().length > 0);
+  if (firstNonEmpty?.trim().startsWith('{')) {
+    const jsonlEntries = parseJSONLContext(context);
+    if (jsonlEntries.length > 0) return jsonlEntries;
+    // Fall through to text parser if JSONL parse returned empty
+  }
+
   const entries: MemoryEntry[] = [];
   const now = Date.now();
 
@@ -106,13 +114,121 @@ export function createEntry(content: string, type: BlockType, baseTime: number):
     hash: hashContent(content),
     timestamp: baseTime,
     score: initialScore,
-    state: initialScore > 0.7 ? 'active' : initialScore > 0.3 ? 'ready' : 'silent',
+    state: initialScore >= 0.7 ? 'active' : initialScore >= 0.3 ? 'ready' : 'silent',
     ttl: 24 * 3600, // 24 hours default
     accessCount: 0,
     tags,
     metadata: { type },
     isBTSP: false,
   };
+}
+
+/**
+ * Parsed JSONL message structure
+ */
+export interface JSONLMessage {
+  role?: string;
+  content?:
+    | string
+    | Array<{
+        type: string;
+        text?: string;
+        name?: string;
+        input?: unknown;
+        content?: string | Array<{ type: string; text?: string }>;
+      }>;
+  type?: string;
+  tool_use?: { name: string; input: unknown };
+  tool_result?: { content: string | Array<{ type: string; text?: string }> };
+}
+
+/**
+ * Parse a single JSONL line into a message
+ * @param line - Single JSON line
+ * @returns Parsed message or null on failure
+ */
+export function parseJSONLLine(line: string): JSONLMessage | null {
+  const trimmed = line.trim();
+  if (trimmed.length === 0) return null;
+
+  try {
+    return JSON.parse(trimmed) as JSONLMessage;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extract text content from a JSONL message content field
+ */
+function extractContent(content: JSONLMessage['content']): string {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((block) => {
+        if (block.type === 'text' && block.text) return block.text;
+        if (block.type === 'tool_use' && block.name) return `[tool_use: ${block.name}]`;
+        if (block.type === 'tool_result') {
+          if (typeof block.content === 'string') return block.content;
+          if (Array.isArray(block.content)) {
+            return block.content
+              .filter((c) => c.type === 'text' && c.text)
+              .map((c) => c.text)
+              .join('\n');
+          }
+        }
+        return '';
+      })
+      .filter((s) => s.length > 0)
+      .join('\n');
+  }
+  return '';
+}
+
+/**
+ * Classify a JSONL message into a BlockType
+ */
+function classifyJSONLMessage(msg: JSONLMessage): BlockType {
+  // Check for tool_use blocks in content array
+  if (Array.isArray(msg.content)) {
+    const hasToolUse = msg.content.some((b) => b.type === 'tool_use');
+    const hasToolResult = msg.content.some((b) => b.type === 'tool_result');
+    if (hasToolUse) return 'tool';
+    if (hasToolResult) return 'result';
+  }
+
+  if (msg.type === 'tool_use' || msg.tool_use) return 'tool';
+  if (msg.type === 'tool_result' || msg.tool_result) return 'result';
+
+  if (msg.role === 'user' || msg.role === 'assistant') return 'conversation';
+
+  return 'other';
+}
+
+/**
+ * Parse JSONL context into memory entries
+ * Handles Claude Code transcript format (one JSON object per line)
+ *
+ * @param context - Raw JSONL context string
+ * @returns Array of memory entries, or empty array if parsing fails
+ */
+export function parseJSONLContext(context: string): MemoryEntry[] {
+  const entries: MemoryEntry[] = [];
+  const now = Date.now();
+  const lines = context.split('\n');
+
+  for (const line of lines) {
+    const msg = parseJSONLLine(line);
+    if (!msg) continue;
+
+    const content = extractContent(msg.content);
+    if (!content || content.trim().length === 0) continue;
+
+    const blockType = classifyJSONLMessage(msg);
+    entries.push(createEntry(content, blockType, now));
+  }
+
+  return entries;
 }
 
 /**

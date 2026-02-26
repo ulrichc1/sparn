@@ -1,16 +1,16 @@
 /**
  * Core memory entry types for Sparn's context optimization engine.
- * Maps to neuroscience-inspired memory model with decay and state transitions.
+ * Memory model with time-based decay and state transitions.
  */
 
 /**
  * Confidence state for memory entries.
- * Based on multi-state synapse model from neuroscience.
+ * Entries are classified as silent, ready, or active based on score.
  */
 export type ConfidenceState = 'silent' | 'ready' | 'active';
 
 /**
- * Represents a single context memory entry with neuroscience-inspired metadata.
+ * Represents a single context memory entry with optimization metadata.
  *
  * State transitions:
  * - score ≤ 0.3 → silent (not included in context)

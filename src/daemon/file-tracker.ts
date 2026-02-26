@@ -8,7 +8,7 @@
  * as they're appended, without re-reading the entire file.
  */
 
-import { readFileSync, statSync } from 'node:fs';
+import { closeSync, openSync, readSync, statSync } from 'node:fs';
 
 export interface FilePosition {
   /** File path */
@@ -97,10 +97,15 @@ export function createFileTracker(): FileTracker {
         return [];
       }
 
-      // Read new content from last position
-      const buffer = Buffer.alloc(currentSize - pos.position);
-      const fd = readFileSync(filePath);
-      fd.copy(buffer, 0, pos.position, currentSize);
+      // Read only new bytes from last position (delta read)
+      const bytesToRead = currentSize - pos.position;
+      const buffer = Buffer.alloc(bytesToRead);
+      const fd = openSync(filePath, 'r');
+      try {
+        readSync(fd, buffer, 0, bytesToRead, pos.position);
+      } finally {
+        closeSync(fd);
+      }
 
       // Convert to string and combine with partial line
       const newContent = (pos.partialLine + buffer.toString('utf-8')).split('\n');

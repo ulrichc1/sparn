@@ -1,13 +1,13 @@
 /**
- * Sleep Compressor - Implements sleep replay principle
+ * Sleep Compressor - Periodic consolidation
  *
- * Neuroscience: During sleep, the brain consolidates memories by replaying important ones
- * and discarding irrelevant information.
- * Application: Periodic consolidation removes decayed entries and merges duplicates.
+ * Removes decayed entries and merges duplicates to keep the memory store lean.
+ * Runs on demand or on a scheduled interval via the daemon.
  */
 
 import type { ConsolidateResult, DuplicateGroup } from '../types/consolidate.js';
 import type { MemoryEntry } from '../types/memory.js';
+import { tokenize } from '../utils/tfidf.js';
 import { createEngramScorer } from './engram-scorer.js';
 
 export interface SleepCompressor {
@@ -169,17 +169,18 @@ export function createSleepCompressor(): SleepCompressor {
     const words1 = tokenize(text1);
     const words2 = tokenize(text2);
 
-    // Build vocabulary
-    const vocab = new Set([...words1, ...words2]);
-
-    // Build word frequency vectors
+    // Build word frequency vectors in single pass each
     const vec1: Record<string, number> = {};
     const vec2: Record<string, number> = {};
 
-    for (const word of vocab) {
-      vec1[word] = words1.filter((w) => w === word).length;
-      vec2[word] = words2.filter((w) => w === word).length;
+    for (const word of words1) {
+      vec1[word] = (vec1[word] ?? 0) + 1;
     }
+    for (const word of words2) {
+      vec2[word] = (vec2[word] ?? 0) + 1;
+    }
+
+    const vocab = new Set([...words1, ...words2]);
 
     // Calculate dot product and magnitudes
     let dotProduct = 0;
@@ -200,13 +201,6 @@ export function createSleepCompressor(): SleepCompressor {
     if (mag1 === 0 || mag2 === 0) return 0;
 
     return dotProduct / (mag1 * mag2);
-  }
-
-  function tokenize(text: string): string[] {
-    return text
-      .toLowerCase()
-      .split(/\s+/)
-      .filter((word) => word.length > 0);
   }
 
   return {
