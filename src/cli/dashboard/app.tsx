@@ -1,5 +1,5 @@
 /**
- * Sparn Dashboard — Persistent TUI with integrated command execution.
+ * Cortex Dashboard — Persistent TUI with integrated command execution.
  *
  * 4 auto-refreshing monitoring panels + command input/output area.
  * Vim-inspired `:` toggle between monitor mode and command mode.
@@ -101,7 +101,7 @@ function Dashboard({ dbPath, projectRoot, refreshInterval }: DashboardProps): Re
   if (data.loading) {
     return (
       <Box flexDirection="column" padding={1}>
-        <Text color={theme.neuralCyan}>Sparn Dashboard</Text>
+        <Text color={theme.neuralCyan}>Cortex Dashboard</Text>
         <Text color={theme.dimGray}>Loading data...</Text>
       </Box>
     );
@@ -110,7 +110,7 @@ function Dashboard({ dbPath, projectRoot, refreshInterval }: DashboardProps): Re
   if (data.error) {
     return (
       <Box flexDirection="column" padding={1}>
-        <Text color={theme.neuralCyan}>Sparn Dashboard</Text>
+        <Text color={theme.neuralCyan}>Cortex Dashboard</Text>
         <Text color={theme.errorRed}>Error: {data.error}</Text>
         <Text color={theme.dimGray}>Press q to quit</Text>
       </Box>
@@ -126,7 +126,7 @@ function Dashboard({ dbPath, projectRoot, refreshInterval }: DashboardProps): Re
       {/* Header */}
       <Box justifyContent="space-between" paddingX={1}>
         <Text bold color={theme.neuralCyan}>
-          Sparn Dashboard
+          Cortex Dashboard
         </Text>
         <Text color={theme.dimGray}>
           {modeHint} | {timeStr}

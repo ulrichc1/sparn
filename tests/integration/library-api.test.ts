@@ -1,6 +1,6 @@
 /**
  * Integration tests for Library API
- * Verifies that Sparn can be used as a library with clean TypeScript API
+ * Verifies that Cortex can be used as a library with clean TypeScript API
  */
 
 import { mkdir, rm } from 'node:fs/promises';

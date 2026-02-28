@@ -12,7 +12,7 @@ describe('Plan/Exec/Verify Workflow', () => {
 
   beforeEach(() => {
     rmSync(tmpDir, { recursive: true, force: true });
-    mkdirSync(join(tmpDir, '.sparn'), { recursive: true });
+    mkdirSync(join(tmpDir, '.cortex'), { recursive: true });
   });
 
   afterEach(() => {

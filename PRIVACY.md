@@ -8,45 +8,45 @@
 
 ## 🔒 Your Privacy Matters
 
-Sparn is a **local-only CLI tool** that respects your privacy. We believe your data belongs to you, which is why Sparn never sends your data anywhere.
+Cortex is a **local-only CLI tool** that respects your privacy. We believe your data belongs to you, which is why Cortex never sends your data anywhere.
 
 ---
 
-## 📊 What Data Does Sparn Store?
+## 📊 What Data Does Cortex Store?
 
-All data is stored **locally on your machine** in the `.sparn/` directory within your project:
+All data is stored **locally on your machine** in the `.cortex/` directory within your project:
 
 ### 1. Context Content
 - **What**: The AI agent context you choose to optimize
-- **Where**: `.sparn/memory.db` (SQLite database)
+- **Where**: `.cortex/memory.db` (SQLite database)
 - **Why**: To optimize and reduce token usage
 - **Control**: You decide what content to optimize
 
 ### 2. Optimization Statistics
 - **What**: Token counts, timestamps, performance metrics
-- **Where**: `.sparn/memory.db` (SQLite database)
+- **Where**: `.cortex/memory.db` (SQLite database)
 - **Why**: To track optimization effectiveness
-- **Control**: View with `sparn stats`, delete with `sparn stats --reset`
+- **Control**: View with `cortex stats`, delete with `cortex stats --reset`
 
 ### 3. Configuration
 - **What**: Your preferences (theme, agent type, optimization settings)
-- **Where**: `.sparn/config.yaml`
-- **Why**: To customize Sparn's behavior
-- **Control**: Edit with `sparn config` or text editor
+- **Where**: `.cortex/config.yaml`
+- **Why**: To customize Cortex's behavior
+- **Control**: Edit with `cortex config` or text editor
 
 ### 4. Metadata
 - **What**: Entry IDs, hashes, scores, timestamps
-- **Where**: `.sparn/memory.db`
+- **Where**: `.cortex/memory.db`
 - **Why**: To manage memory lifecycle (decay, deduplication)
 - **Control**: Managed automatically, visible in database
 
 ---
 
-## 🚫 What Sparn Does NOT Do
+## 🚫 What Cortex Does NOT Do
 
 We want to be crystal clear about what we **don't** do:
 
-- ❌ **No Data Transmission**: Sparn NEVER sends data to external servers
+- ❌ **No Data Transmission**: Cortex NEVER sends data to external servers
 - ❌ **No Telemetry**: We don't collect usage statistics or analytics
 - ❌ **No Tracking**: No cookies, no tracking pixels, no fingerprinting
 - ❌ **No Cloud Storage**: All data stays on your local machine
@@ -54,7 +54,7 @@ We want to be crystal clear about what we **don't** do:
 - ❌ **No Personal Data Collection**: We don't collect names, emails, or identifiers
 - ❌ **No Account Required**: No sign-up, no registration, no login
 
-**Bottom line**: Sparn works 100% offline. You could disconnect from the internet and it would still work perfectly.
+**Bottom line**: Cortex works 100% offline. You could disconnect from the internet and it would still work perfectly.
 
 ---
 
@@ -67,7 +67,7 @@ We want to be crystal clear about what we **don't** do:
 
 ### File System Permissions
 - Data protected by your OS file permissions
-- Only you (and programs you run) can access `.sparn/`
+- Only you (and programs you run) can access `.cortex/`
 - Standard file system security applies
 
 ### Database Integrity
@@ -87,20 +87,20 @@ We want to be crystal clear about what we **don't** do:
 You have **complete control** over your data:
 
 ### Access Your Data ✅
-View everything Sparn stores:
+View everything Cortex stores:
 
 ```bash
 # View database structure
-sqlite3 .sparn/memory.db ".schema"
+sqlite3 .cortex/memory.db ".schema"
 
 # View stored entries
-sqlite3 .sparn/memory.db "SELECT id, timestamp, score, state FROM entries_index LIMIT 10;"
+sqlite3 .cortex/memory.db "SELECT id, timestamp, score, state FROM entries_index LIMIT 10;"
 
 # View statistics
-sparn stats --json
+cortex stats --json
 
 # View configuration
-cat .sparn/config.yaml
+cat .cortex/config.yaml
 ```
 
 ### Export Your Data ✅
@@ -108,13 +108,13 @@ Take your data anywhere:
 
 ```bash
 # Full database export (SQL format)
-sqlite3 .sparn/memory.db .dump > sparn-backup.sql
+sqlite3 .cortex/memory.db .dump > cortex-backup.sql
 
 # Export statistics (JSON format)
-sparn stats --json > stats.json
+cortex stats --json > stats.json
 
 # Copy entire directory
-cp -r .sparn/ sparn-backup/
+cp -r .cortex/ cortex-backup/
 ```
 
 ### Modify Your Data ✅
@@ -122,31 +122,31 @@ Change anything you want:
 
 ```bash
 # Edit configuration
-sparn config set pruning.threshold 10
+cortex config set pruning.threshold 10
 
 # Or edit directly
-nano .sparn/config.yaml
+nano .cortex/config.yaml
 
 # Modify database (advanced)
-sqlite3 .sparn/memory.db "UPDATE entries_index SET score = 1.0 WHERE isBTSP = 1;"
+sqlite3 .cortex/memory.db "UPDATE entries_index SET score = 1.0 WHERE isBTSP = 1;"
 ```
 
 ### Delete Your Data ✅
 Remove data anytime:
 
 ```bash
-# Delete all Sparn data (complete removal)
-rm -rf .sparn/
+# Delete all Cortex data (complete removal)
+rm -rf .cortex/
 
 # Delete old/decayed entries only
-sparn consolidate
+cortex consolidate
 
 # Clear statistics only
-sparn stats --reset
+cortex stats --reset
 
-# Uninstall Sparn entirely
-npm uninstall sparn
-rm -rf .sparn/
+# Uninstall Cortex entirely
+npm uninstall @sparn/cortex
+rm -rf .cortex/
 ```
 
 ---
@@ -155,16 +155,16 @@ rm -rf .sparn/
 
 ### EU GDPR Compliance ✅
 
-Sparn is **fully compliant** with the EU General Data Protection Regulation (GDPR):
+Cortex is **fully compliant** with the EU General Data Protection Regulation (GDPR):
 
 #### Your Rights Under GDPR:
-- ✅ **Right to Access** (Art. 15): Access all data in `.sparn/`
+- ✅ **Right to Access** (Art. 15): Access all data in `.cortex/`
 - ✅ **Right to Rectification** (Art. 16): Edit config or database
-- ✅ **Right to Erasure** (Art. 17): Delete `.sparn/` directory
+- ✅ **Right to Erasure** (Art. 17): Delete `.cortex/` directory
 - ✅ **Right to Data Portability** (Art. 20): Export SQLite database
 - ✅ **Right to Object** (Art. 21): Stop processing anytime
 
-#### How Sparn Complies:
+#### How Cortex Complies:
 - **Data Minimization**: Only stores necessary data
 - **Purpose Limitation**: Data used only for optimization
 - **Storage Limitation**: TTL mechanism, automatic decay
@@ -178,27 +178,27 @@ Sparn is **fully compliant** with the EU General Data Protection Regulation (GDP
 - 🇨🇦 **Canada PIPEDA**: Compliant (no personal data)
 - 🇦🇺 **Australia Privacy Act**: Compliant
 
-**Why Sparn is Universally Compliant**: Local-only tools don't trigger most privacy regulations because there's no data collection, transmission, or third-party processing.
+**Why Cortex is Universally Compliant**: Local-only tools don't trigger most privacy regulations because there's no data collection, transmission, or third-party processing.
 
 ---
 
 ## ⚠️ Your Responsibilities
 
-### When Using Sparn with Personal Data
+### When Using Cortex with Personal Data
 
 If you choose to optimize context that contains **personal data** (names, emails, addresses, etc.), **you** are responsible for:
 
 1. **Legal Basis**: Ensure you have the right to process this data
 2. **Consent**: Obtain consent from data subjects if required
-3. **Security**: Secure your machine and `.sparn/` directory
+3. **Security**: Secure your machine and `.cortex/` directory
 4. **Data Subject Rights**: Honor access/deletion requests from individuals
 5. **Breach Notification**: Report breaches per applicable laws
 
 **Example**: If you optimize customer support transcripts containing customer names and emails, you become the **data controller** and must comply with GDPR/privacy laws.
 
-### Sparn's Role vs Your Role
+### Cortex's Role vs Your Role
 
-- **Sparn (the tool)**: Provides local optimization functionality
+- **Cortex (the tool)**: Provides local optimization functionality
 - **You (the user)**: Decide what data to process and are responsible for compliance
 
 This is similar to using Microsoft Word or Excel with personal data—the tool provider isn't responsible for your use of the tool.
@@ -209,8 +209,8 @@ To minimize privacy risks:
 - ✅ **Anonymize data** before optimization if possible
 - ✅ **Remove PII** from context when not needed
 - ✅ **Secure your machine** with encryption, passwords
-- ✅ **Don't share** `.sparn/` directory with others
-- ✅ **Regular cleanup** using `sparn consolidate`
+- ✅ **Don't share** `.cortex/` directory with others
+- ✅ **Regular cleanup** using `cortex consolidate`
 
 ---
 
@@ -218,12 +218,12 @@ To minimize privacy risks:
 
 ### Automatic Data Management
 
-Sparn uses **time-based decay** to automatically manage data:
+Cortex uses **time-based decay** to automatically manage data:
 
 1. **Time-to-Live (TTL)**: Entries have configurable lifespans
 2. **Engram Decay**: Scores decrease over time (like memory fading)
 3. **State Transitions**: Old entries become "silent" (not retrieved)
-4. **Consolidation**: `sparn consolidate` removes fully decayed entries
+4. **Consolidation**: `cortex consolidate` removes fully decayed entries
 
 ### Manual Data Control
 
@@ -231,18 +231,18 @@ You can control retention:
 
 ```bash
 # Remove old/decayed data
-sparn consolidate
+cortex consolidate
 
 # Adjust decay rate (config)
-sparn config set decay.defaultTTL 24  # 24 hours
+cortex config set decay.defaultTTL 24  # 24 hours
 
 # Clear everything
-rm -rf .sparn/
+rm -rf .cortex/
 ```
 
 ### No Indefinite Storage
 
-By design, Sparn doesn't keep data forever:
+By design, Cortex doesn't keep data forever:
 - Unused entries decay naturally
 - Low-score entries are pruned during optimization
 - Consolidation removes old data
@@ -254,8 +254,8 @@ By design, Sparn doesn't keep data forever:
 
 ### Open Source
 
-Sparn is **open source** (MIT License):
-- View all code: https://github.com/ulrichc1/sparn
+Cortex is **open source** (MIT License):
+- View all code: https://github.com/sparn-labs/cortex
 - Verify no data transmission
 - Review security measures
 - Contribute improvements
@@ -270,17 +270,17 @@ What you see is what you get:
 
 ### Audit Trail
 
-You can audit Sparn's behavior:
+You can audit Cortex's behavior:
 
 ```bash
 # Monitor file system access
-strace -e open,write sparn optimize -i input.txt
+strace -e open,write cortex optimize -i input.txt
 
 # Monitor network (you'll see ZERO network calls)
-tcpdump -i any host sparn
+tcpdump -i any host cortex
 
 # Check for loaded network libraries
-lsof -p $(pgrep sparn) | grep socket
+lsof -p $(pgrep cortex) | grep socket
 ```
 
 ---
@@ -288,8 +288,8 @@ lsof -p $(pgrep sparn) | grep socket
 ## 📧 Privacy Questions?
 
 ### General Privacy Questions
-- **Open a Discussion**: https://github.com/ulrichc1/sparn/discussions
-- **Read the Code**: https://github.com/ulrichc1/sparn
+- **Open a Discussion**: https://github.com/sparn-labs/cortex/discussions
+- **Read the Code**: https://github.com/sparn-labs/cortex
 - **Review GDPR Compliance**: See GDPR-COMPLIANCE.md (internal doc)
 
 ### Security Concerns
@@ -314,16 +314,16 @@ We may update this Privacy Policy to reflect:
 - Change announced in release notes
 - Commit history visible on GitHub
 
-**Your Continued Use**: Using Sparn after policy changes means you accept the updated policy.
+**Your Continued Use**: Using Cortex after policy changes means you accept the updated policy.
 
 ---
 
 ## 📜 Legal Disclaimer
 
-This Privacy Policy describes how Sparn (the software tool) handles data. It does not constitute legal advice. If you use Sparn to process personal data, consult a qualified attorney about your obligations under applicable privacy laws.
+This Privacy Policy describes how Cortex (the software tool) handles data. It does not constitute legal advice. If you use Cortex to process personal data, consult a qualified attorney about your obligations under applicable privacy laws.
 
-**Tool Provider**: We provide Sparn as-is under the MIT License.
-**Data Controller**: You (the user) are the data controller when you use Sparn.
+**Tool Provider**: We provide Cortex as-is under the MIT License.
+**Data Controller**: You (the user) are the data controller when you use Cortex.
 **No Service Provider Relationship**: We don't provide data processing services.
 
 ---
@@ -339,7 +339,7 @@ This Privacy Policy describes how Sparn (the software tool) handles data. It doe
 
 **Privacy Score**: 🌟🌟🌟🌟🌟 (5/5)
 
-Sparn respects your privacy because your data never leaves your machine. Period.
+Cortex respects your privacy because your data never leaves your machine. Period.
 
 ---
 

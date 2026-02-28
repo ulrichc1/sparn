@@ -15,7 +15,7 @@ We provide security updates for the following versions:
 Instead, please report security issues through one of these channels:
 
 ### 1. GitHub Security Advisories (Preferred)
-Visit: https://github.com/ulrichc1/sparn/security/advisories/new
+Visit: https://github.com/sparn-labs/cortex/security/advisories/new
 
 ### 2. Email
 Send details to: ulrichc1.dev@gmail.com
@@ -45,10 +45,10 @@ If the vulnerability is confirmed, we will:
 
 ### For Users
 
-When using Sparn, follow these best practices:
+When using Cortex, follow these best practices:
 
 1. **Validate Environment Variables**
-   - Check your `EDITOR` environment variable before using `sparn config`
+   - Check your `EDITOR` environment variable before using `cortex config`
    - Avoid setting suspicious commands in `EDITOR`
 
 2. **Process Trusted Context Only**
@@ -56,9 +56,9 @@ When using Sparn, follow these best practices:
    - Avoid processing arbitrary user-supplied content
 
 3. **Regular Maintenance**
-   - Run `sparn consolidate` periodically to clean database
-   - Keep Sparn updated: `npm update sparn`
-   - Monitor database size (`.sparn/memory.db`)
+   - Run `cortex consolidate` periodically to clean database
+   - Keep Cortex updated: `npm update @sparn/cortex`
+   - Monitor database size (`.cortex/memory.db`)
 
 4. **Resource Limits**
    - Avoid processing extremely large context files (>100MB)
@@ -66,13 +66,13 @@ When using Sparn, follow these best practices:
    - Use `--dry-run` flag to preview optimizations first
 
 5. **Update Regularly**
-   - Check for updates: `npm outdated sparn`
+   - Check for updates: `npm outdated @sparn/cortex`
    - Review changelogs before updating
    - Run tests after updating if you use the programmatic API
 
 ### For Developers
 
-If you're using Sparn's programmatic API:
+If you're using Cortex's programmatic API:
 
 1. **Input Validation**
    - Validate context before passing to `optimize()`
@@ -80,7 +80,7 @@ If you're using Sparn's programmatic API:
    - Sanitize metadata and tags
 
 2. **Error Handling**
-   - Wrap Sparn calls in try-catch blocks
+   - Wrap Cortex calls in try-catch blocks
    - Handle database errors gracefully
    - Don't expose internal errors to end users
 
@@ -90,7 +90,7 @@ If you're using Sparn's programmatic API:
    - Monitor memory usage in production
 
 4. **Configuration**
-   - Use `.sparn/config.yaml` for settings
+   - Use `.cortex/config.yaml` for settings
    - Avoid hardcoding sensitive data
    - Validate config values before use
 
@@ -98,7 +98,7 @@ If you're using Sparn's programmatic API:
 
 ## Security Features
 
-Sparn includes several security features:
+Cortex includes several security features:
 
 ### 1. SQL Injection Protection
 - All queries use prepared statements
@@ -111,7 +111,7 @@ Sparn includes several security features:
 - User input never evaluated as code
 
 ### 3. Path Traversal Protection
-- All paths resolved to `.sparn/` directory
+- All paths resolved to `.cortex/` directory
 - No user-controlled path construction
 - Safe use of `path.join()` and `path.resolve()`
 
@@ -122,7 +122,7 @@ Sparn includes several security features:
 
 ### 5. Information Disclosure Prevention
 - Generic error messages
-- Stack traces only in debug mode (`SPARN_DEBUG=true`)
+- Stack traces only in debug mode (`CORTEX_DEBUG=true`)
 - No sensitive data in logs
 
 ---
@@ -136,7 +136,7 @@ Sparn includes several security features:
    - No database size limits
    - No concurrent execution protection
 
-   **Mitigation**: Use reasonable input sizes, run `sparn consolidate` regularly
+   **Mitigation**: Use reasonable input sizes, run `cortex consolidate` regularly
 
 2. **Child Process Timeout**
    - Relay command has no timeout
@@ -154,7 +154,7 @@ These limitations are documented and will be addressed in future releases. See [
 
 ## Dependency Security
 
-Sparn uses well-maintained, trusted dependencies:
+Cortex uses well-maintained, trusted dependencies:
 
 - **better-sqlite3**: Native SQLite binding (7k+ stars)
 - **ora**: Terminal spinners by sindresorhus (9k+ stars)
@@ -217,16 +217,16 @@ This gives users 7 days to update before public disclosure.
 For security updates:
 ```bash
 # Check for updates
-npm outdated sparn
+npm outdated @sparn/cortex
 
 # Update to latest patch
-npm update sparn
+npm update @sparn/cortex
 
 # Update to latest minor/major (review changelog first)
-npm install sparn@latest
+npm install @sparn/cortex@latest
 
 # Verify update
-sparn --version
+cortex --version
 ```
 
 ---
@@ -234,7 +234,7 @@ sparn --version
 ## Contact
 
 For security-related questions (non-vulnerabilities):
-- Open a discussion: https://github.com/ulrichc1/sparn/discussions
+- Open a discussion: https://github.com/sparn-labs/cortex/discussions
 - Tag with `security` label
 
 For security vulnerabilities:

@@ -24,11 +24,11 @@ describe('Realtime Config', () => {
     });
 
     it('should have pidFile default', () => {
-      expect(DEFAULT_CONFIG.realtime.pidFile).toBe('.sparn/daemon.pid');
+      expect(DEFAULT_CONFIG.realtime.pidFile).toBe('.cortex/daemon.pid');
     });
 
     it('should have logFile default', () => {
-      expect(DEFAULT_CONFIG.realtime.logFile).toBe('.sparn/daemon.log');
+      expect(DEFAULT_CONFIG.realtime.logFile).toBe('.cortex/daemon.log');
     });
 
     it('should have debounceMs default', () => {

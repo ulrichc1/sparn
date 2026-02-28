@@ -25,7 +25,7 @@ describe('Hook State Cache', () => {
   let cacheFile: string;
 
   beforeEach(() => {
-    tempDir = join(tmpdir(), `sparn-cache-test-${Date.now()}`);
+    tempDir = join(tmpdir(), `cortex-cache-test-${Date.now()}`);
     mkdirSync(tempDir, { recursive: true });
     cacheFile = join(tempDir, 'hook-state-cache.json');
   });
@@ -57,7 +57,7 @@ describe('Hook State Cache', () => {
   it('should write and read cache entry', () => {
     const entry: CacheEntry = {
       key: 'session1:12345:1000',
-      hint: '[sparn] Context is growing.',
+      hint: '[cortex] Context is growing.',
       timestamp: Date.now(),
     };
     writeTestCache(entry);
@@ -65,7 +65,7 @@ describe('Hook State Cache', () => {
     const cached = readTestCache();
     expect(cached).not.toBeNull();
     expect(cached?.key).toBe('session1:12345:1000');
-    expect(cached?.hint).toBe('[sparn] Context is growing.');
+    expect(cached?.hint).toBe('[cortex] Context is growing.');
   });
 
   it('should invalidate on different session', () => {

@@ -12,7 +12,7 @@ describe('Workflow Planner', () => {
 
   beforeEach(() => {
     rmSync(tmpDir, { recursive: true, force: true });
-    mkdirSync(join(tmpDir, '.sparn'), { recursive: true });
+    mkdirSync(join(tmpDir, '.cortex'), { recursive: true });
   });
 
   afterEach(() => {
@@ -390,7 +390,7 @@ describe('Workflow Planner', () => {
     it('should return the plans directory path', () => {
       const planner = createWorkflowPlanner(tmpDir);
       const dir = planner.getPlansDir();
-      expect(dir).toContain('.sparn');
+      expect(dir).toContain('.cortex');
       expect(dir).toContain('plans');
     });
   });

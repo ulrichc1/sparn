@@ -1,5 +1,5 @@
 /**
- * Dashboard Stats — Pure function that reads .sparn/memory.db and formats
+ * Dashboard Stats — Pure function that reads .cortex/memory.db and formats
  * a compact dashboard summary for injection into Claude Code hooks.
  *
  * No React dependency. Opens DB connections in try/finally to ensure cleanup.
@@ -9,9 +9,9 @@ import { existsSync, statSync } from 'node:fs';
 import Database from 'better-sqlite3';
 
 /**
- * Format a compact dashboard summary from the Sparn database.
+ * Format a compact dashboard summary from the Cortex database.
  *
- * @param dbPath - Path to .sparn/memory.db
+ * @param dbPath - Path to .cortex/memory.db
  * @param _projectRoot - Project root (reserved for future use)
  * @returns Formatted dashboard string, or null if DB doesn't exist
  */
@@ -38,7 +38,7 @@ export function formatDashboardStats(dbPath: string, _projectRoot: string): stri
       .join(' ');
 
     lines.push(
-      `[sparn-dashboard] Entries: ${entryCount} (${stateParts || 'none'}) | DB: ${dbSizeMB}MB`,
+      `[cortex-dashboard] Entries: ${entryCount} (${stateParts || 'none'}) | DB: ${dbSizeMB}MB`,
     );
 
     // --- Optimization stats ---
@@ -46,14 +46,14 @@ export function formatDashboardStats(dbPath: string, _projectRoot: string): stri
     if (optStats.total > 0) {
       const savedTokens = formatTokens(optStats.totalSaved);
       lines.push(
-        `[sparn-dashboard] Optimizations: ${optStats.total} total | Saved: ${savedTokens} tokens | Avg: ${optStats.avgReduction.toFixed(1)}%`,
+        `[cortex-dashboard] Optimizations: ${optStats.total} total | Saved: ${savedTokens} tokens | Avg: ${optStats.avgReduction.toFixed(1)}%`,
       );
 
       if (optStats.recent.length > 0) {
         const recentParts = optStats.recent
           .map((r) => `${r.reduction.toFixed(1)}% (${r.durationMs}ms)`)
           .join(' | ');
-        lines.push(`[sparn-dashboard] Last ${optStats.recent.length}: ${recentParts}`);
+        lines.push(`[cortex-dashboard] Last ${optStats.recent.length}: ${recentParts}`);
       }
     }
 
@@ -61,7 +61,7 @@ export function formatDashboardStats(dbPath: string, _projectRoot: string): stri
     const debtStats = getDebtStats(db);
     if (debtStats.open > 0 || debtStats.overdue > 0) {
       lines.push(
-        `[sparn-dashboard] Debt: ${debtStats.open} open${debtStats.overdue > 0 ? `, ${debtStats.overdue} overdue` : ''}`,
+        `[cortex-dashboard] Debt: ${debtStats.open} open${debtStats.overdue > 0 ? `, ${debtStats.overdue} overdue` : ''}`,
       );
     }
 

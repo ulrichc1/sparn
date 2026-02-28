@@ -1,5 +1,5 @@
 /**
- * MCP sparn_search Tool Tests
+ * MCP cortex_search Tool Tests
  */
 
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
@@ -9,7 +9,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createKVMemory, type KVMemory } from '../../src/core/kv-memory.js';
-import { createSparnMcpServer } from '../../src/mcp/server.js';
+import { createCortexMcpServer } from '../../src/mcp/server.js';
 import type { MemoryEntry } from '../../src/types/memory.js';
 
 function makeEntry(id: string, content: string, overrides: Partial<MemoryEntry> = {}): MemoryEntry {
@@ -29,17 +29,17 @@ function makeEntry(id: string, content: string, overrides: Partial<MemoryEntry> 
   };
 }
 
-describe('MCP sparn_search Tool', () => {
+describe('MCP cortex_search Tool', () => {
   let memory: KVMemory;
   let client: Client;
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = join(tmpdir(), `sparn-mcp-search-test-${Date.now()}`);
+    tempDir = join(tmpdir(), `cortex-mcp-search-test-${Date.now()}`);
     mkdirSync(tempDir, { recursive: true });
     memory = await createKVMemory(join(tempDir, 'test.db'));
 
-    const server = createSparnMcpServer({ memory });
+    const server = createCortexMcpServer({ memory });
     client = new Client({ name: 'test-client', version: '1.0.0' });
 
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -59,7 +59,7 @@ describe('MCP sparn_search Tool', () => {
     await memory.put(makeEntry('e2', 'Python data pipeline'));
 
     const result = await client.callTool({
-      name: 'sparn_search',
+      name: 'cortex_search',
       arguments: { query: 'TypeScript' },
     });
     const content = result.content as Array<{ type: string; text: string }>;
@@ -75,7 +75,7 @@ describe('MCP sparn_search Tool', () => {
     await memory.put(makeEntry('e3', 'hello world three'));
 
     const result = await client.callTool({
-      name: 'sparn_search',
+      name: 'cortex_search',
       arguments: { query: 'hello', limit: 2 },
     });
     const content = result.content as Array<{ type: string; text: string }>;
@@ -88,7 +88,7 @@ describe('MCP sparn_search Tool', () => {
     await memory.put(makeEntry('e1', 'hello world'));
 
     const result = await client.callTool({
-      name: 'sparn_search',
+      name: 'cortex_search',
       arguments: { query: 'nonexistent' },
     });
     const content = result.content as Array<{ type: string; text: string }>;
@@ -101,7 +101,7 @@ describe('MCP sparn_search Tool', () => {
     const longContent = 'x'.repeat(1000);
     await memory.put(makeEntry('e1', longContent));
 
-    const result = await client.callTool({ name: 'sparn_search', arguments: { query: 'x' } });
+    const result = await client.callTool({ name: 'cortex_search', arguments: { query: 'x' } });
     const content = result.content as Array<{ type: string; text: string }>;
     const data = JSON.parse(content[0]?.text);
 
@@ -113,7 +113,7 @@ describe('MCP sparn_search Tool', () => {
   it('should handle errors gracefully', async () => {
     await memory.close();
     // Calling search on closed memory should return error
-    const result = await client.callTool({ name: 'sparn_search', arguments: { query: 'test' } });
+    const result = await client.callTool({ name: 'cortex_search', arguments: { query: 'test' } });
     expect(result.isError).toBe(true);
   });
 });

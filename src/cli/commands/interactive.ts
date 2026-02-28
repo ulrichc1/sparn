@@ -8,7 +8,7 @@ import { confirm, input, number, select } from '@inquirer/prompts';
 import { load as parseYAML, dump as stringifyYAML } from 'js-yaml';
 import type { KVMemory } from '../../core/kv-memory.js';
 import { getMetrics } from '../../core/metrics.js';
-import type { SparnConfig } from '../../types/config.js';
+import type { CortexConfig } from '../../types/config.js';
 import { brainPink, dim, errorRed, neuralCyan, synapseViolet } from '../ui/colors.js';
 
 export interface InteractiveCommandOptions {
@@ -30,7 +30,7 @@ export interface InteractiveCommandResult {
  */
 function showWelcomeBanner(): void {
   console.log(brainPink('\n━'.repeat(60)));
-  console.log(brainPink('  🧠 Sparn Interactive Mode'));
+  console.log(brainPink('  🧠 Cortex Interactive Mode'));
   console.log(brainPink('━'.repeat(60)));
   console.log(dim('  Conversational configuration and exploration\n'));
 }
@@ -84,7 +84,7 @@ async function configureWizard(configPath: string): Promise<void> {
 
   // Load current config
   const configYAML = readFileSync(configPath, 'utf-8');
-  const config = parseYAML(configYAML) as SparnConfig;
+  const config = parseYAML(configYAML) as CortexConfig;
 
   const section = await select({
     message: 'Which settings would you like to configure?',
@@ -602,13 +602,13 @@ export async function interactiveCommand(
 
         case 'exit':
           running = false;
-          console.log(brainPink('\n👋 Thanks for using Sparn!\n'));
+          console.log(brainPink('\n👋 Thanks for using Cortex!\n'));
           break;
       }
     } catch (error) {
       if ((error as { message?: string }).message === 'User force closed the prompt') {
         running = false;
-        console.log(brainPink('\n👋 Thanks for using Sparn!\n'));
+        console.log(brainPink('\n👋 Thanks for using Cortex!\n'));
       } else {
         console.error(
           errorRed('\n✗ Error:'),

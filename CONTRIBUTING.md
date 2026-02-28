@@ -1,6 +1,6 @@
-# Contributing to Sparn
+# Contributing to Cortex
 
-Thank you for your interest in contributing to Sparn! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to Cortex! This document provides guidelines and instructions for contributing to the project.
 
 ---
 
@@ -36,8 +36,8 @@ This project follows a simple code of conduct: **Be respectful and constructive*
 
 ```bash
 # Clone the repository
-git clone https://github.com/ulrichc1/sparn.git
-cd sparn
+git clone https://github.com/sparn-labs/cortex.git
+cd cortex
 
 # Install dependencies
 npm install
@@ -70,8 +70,8 @@ npm run typecheck    # TypeScript type checking (no emit)
 # Run init command
 node dist/cli/index.js init
 
-# Check that .sparn/ directory was created
-ls -la .sparn/
+# Check that .cortex/ directory was created
+ls -la .cortex/
 
 # Run tests
 npm test
@@ -81,7 +81,7 @@ npm test
 
 ## Constitution
 
-Sparn follows a strict **Constitution** with 9 articles that govern all development. **All contributions must comply with these articles.**
+Cortex follows a strict **Constitution** with 9 articles that govern all development. **All contributions must comply with these articles.**
 
 ### The 9 Articles
 
@@ -101,7 +101,7 @@ Sparn follows a strict **Constitution** with 9 articles that govern all developm
 
 ## TDD Workflow
 
-Sparn uses **strict Test-Driven Development (TDD)**. This is not optional.
+Cortex uses **strict Test-Driven Development (TDD)**. This is not optional.
 
 ### The Red-Green-Refactor Cycle
 
@@ -181,7 +181,7 @@ export function createSparsePruner(config: SparsePrunerConfig): SparsePruner {
 
 ### 1. Find or Create an Issue
 
-- Check [GitHub Issues](https://github.com/ulrichc1/sparn/issues) for open tasks
+- Check [GitHub Issues](https://github.com/sparn-labs/cortex/issues) for open tasks
 - Comment on an issue to claim it
 - For new features, create an issue first to discuss
 
@@ -189,8 +189,8 @@ export function createSparsePruner(config: SparsePrunerConfig): SparsePruner {
 
 ```bash
 # Fork the repository on GitHub, then:
-git clone https://github.com/YOUR_USERNAME/sparn.git
-cd sparn
+git clone https://github.com/YOUR_USERNAME/cortex.git
+cd cortex
 
 # Create a feature branch
 git checkout -b feature/your-feature-name
@@ -262,7 +262,7 @@ git push origin feature/your-feature-name
 ## Project Structure
 
 ```
-sparn/
+cortex/
 ├── src/
 │   ├── core/              # Optimization modules (library)
 │   │   ├── kv-memory.ts          # Key-value memory store
@@ -284,7 +284,7 @@ sparn/
 │   └── integration/       # Integration tests (full workflows)
 ├── docs/                  # Documentation
 ├── specs/
-│   └── 001-sparn-core/    # Project specifications
+│   └── 001-cortex-core/    # Project specifications
 └── dist/                  # Build output (gitignored)
 ```
 
@@ -373,7 +373,7 @@ export function calculateScore(entry: any) {
 
 ### Formatting
 
-Sparn uses **Biome** for linting and formatting:
+Cortex uses **Biome** for linting and formatting:
 
 ```bash
 # Auto-fix issues
@@ -459,10 +459,10 @@ git commit -m "docs: update NEUROSCIENCE.md with BTSP examples"
 
 ## Questions?
 
-- **Issues**: [GitHub Issues](https://github.com/ulrichc1/sparn/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/ulrichc1/sparn/discussions)
+- **Issues**: [GitHub Issues](https://github.com/sparn-labs/cortex/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/sparn-labs/cortex/discussions)
 - **Email**: [Your contact email]
 
 ---
 
-**Thank you for contributing to Sparn!**
+**Thank you for contributing to Cortex!**

@@ -34,7 +34,7 @@ describe('Path Traversal Prevention', () => {
 
   beforeEach(() => {
     rmSync(tmpDir, { recursive: true, force: true });
-    mkdirSync(join(tmpDir, '.sparn'), { recursive: true });
+    mkdirSync(join(tmpDir, '.cortex'), { recursive: true });
   });
 
   afterEach(() => {
@@ -73,7 +73,7 @@ describe('Verify does not destroy in-progress plans', () => {
 
   beforeEach(() => {
     rmSync(tmpDir, { recursive: true, force: true });
-    mkdirSync(join(tmpDir, '.sparn'), { recursive: true });
+    mkdirSync(join(tmpDir, '.cortex'), { recursive: true });
   });
 
   afterEach(() => {

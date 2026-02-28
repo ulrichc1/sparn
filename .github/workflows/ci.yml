@@ -84,9 +84,9 @@ jobs:
       - name: Test init command
         run: |
           node dist/cli/index.js init
-          ls -la .sparn/
-          test -f .sparn/config.yaml
-          test -f .sparn/memory.db
+          ls -la .cortex/
+          test -f .cortex/config.yaml
+          test -f .cortex/memory.db
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

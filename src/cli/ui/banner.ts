@@ -1,19 +1,19 @@
 /**
- * ASCII banner for Sparn CLI.
- * Displayed on `sparn init` and `sparn --version`.
+ * ASCII banner for Cortex CLI.
+ * Displayed on `cortex init` and `cortex --version`.
  */
 
 import { brainPink, neuralCyan, synapseViolet } from './colors.js';
 
 /**
- * Sparn ASCII banner.
+ * Cortex ASCII banner.
  */
 export const BANNER = `
-   ____  ____  ___    ____  _   __
-  / ___\\/ __ \\/ _ \\  / __ \\/ | / /
-  \\__ \\/ /_/ / /_\\ \\/ /_/ /  |/ /
- ___/ / ____/ __ _/ _, _/ /|  /
-/____/_/   /_/ |_/_/ |_/_/ |_/
+  _____  ____  ____  ______ _______  __
+ / ____// __ \\/ __ \\/_  __// ____/ |/ /
+/ /    / / / / /_/ / / /  / __/  |   /
+/ /___/ /_/ / _, _/ / /  / /___ /   |
+\\____/\\____/_/ |_| /_/  /_____//_/|_|
 `;
 
 /**

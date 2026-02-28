@@ -15,7 +15,7 @@ describe('File Tracker', () => {
 
   beforeEach(() => {
     tracker = createFileTracker();
-    testDir = join(tmpdir(), `sparn-test-${Date.now()}`);
+    testDir = join(tmpdir(), `cortex-test-${Date.now()}`);
     mkdirSync(testDir, { recursive: true });
     testFile = join(testDir, 'test.jsonl');
   });

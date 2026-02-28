@@ -169,7 +169,7 @@ export function showConsolidationSummary(
  */
 export function showInitSuccess(message: string): void {
   console.log(`\n${brainPink('━'.repeat(60))}`);
-  console.log(brainPink('  🧠 Sparn Initialized Successfully!'));
+  console.log(brainPink('  🧠 Cortex Initialized Successfully!'));
   console.log(brainPink('━'.repeat(60)));
   console.log(`  ${neuralCyan(message)}`);
   console.log(`${brainPink('━'.repeat(60))}\n`);

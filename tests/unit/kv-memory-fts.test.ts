@@ -32,7 +32,7 @@ describe('KVMemory FTS5', () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = join(tmpdir(), `sparn-fts-test-${Date.now()}`);
+    tempDir = join(tmpdir(), `cortex-fts-test-${Date.now()}`);
     mkdirSync(tempDir, { recursive: true });
     dbPath = join(tempDir, 'test.db');
     memory = await createKVMemory(dbPath);

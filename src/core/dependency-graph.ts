@@ -44,7 +44,7 @@ export interface DependencyGraphConfig {
   maxDepth?: number;
   /** File extensions to analyze (default: ['.ts', '.tsx', '.js', '.jsx']) */
   extensions?: string[];
-  /** Directories to ignore (default: ['node_modules', 'dist', '.git', '.sparn']) */
+  /** Directories to ignore (default: ['node_modules', 'dist', '.git', '.cortex']) */
   ignoreDirs?: string[];
 }
 
@@ -251,7 +251,7 @@ export function createDependencyGraph(config: DependencyGraphConfig): Dependency
     projectRoot,
     maxDepth = 50,
     extensions = ['.ts', '.tsx', '.js', '.jsx'],
-    ignoreDirs = ['node_modules', 'dist', '.git', '.sparn', 'coverage'],
+    ignoreDirs = ['node_modules', 'dist', '.git', '.cortex', 'coverage'],
   } = config;
 
   const nodes = new Map<string, DependencyNode>();

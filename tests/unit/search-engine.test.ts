@@ -9,7 +9,7 @@ import { createSearchEngine } from '../../src/core/search-engine.js';
 
 describe('Search Engine', () => {
   const tmpDir = join(process.cwd(), '.test-search-tmp');
-  const dbPath = join(tmpDir, '.sparn', 'search.db');
+  const dbPath = join(tmpDir, '.cortex', 'search.db');
 
   beforeEach(() => {
     try {
@@ -17,7 +17,7 @@ describe('Search Engine', () => {
     } catch {
       // Ignore errors on Windows file locks
     }
-    mkdirSync(join(tmpDir, '.sparn'), { recursive: true });
+    mkdirSync(join(tmpDir, '.cortex'), { recursive: true });
     mkdirSync(join(tmpDir, 'src', 'core'), { recursive: true });
     mkdirSync(join(tmpDir, 'src', 'utils'), { recursive: true });
   });

@@ -1,5 +1,5 @@
 /**
- * Sparn - Context optimization for AI coding agents
+ * Cortex - Context optimization for AI coding agents
  *
  * Main library export for programmatic API usage.
  * Per Article I: CLI-First, Library-Second - all core modules are importable.
@@ -62,10 +62,10 @@ export type { SparsePruner, SparsePrunerConfig } from './core/sparse-pruner.js';
 export { createSparsePruner } from './core/sparse-pruner.js';
 // v1.4.0 — Workflow Planner
 export type {
+  CortexPlan,
   PlanExecConstraints,
   PlanStep,
   PlanVerifyResult,
-  SparnPlan,
   WorkflowPlanner,
 } from './core/workflow-planner.js';
 export { createWorkflowPlanner } from './core/workflow-planner.js';
@@ -86,8 +86,8 @@ export type {
 } from './daemon/session-watcher.js';
 export { createSessionWatcher } from './daemon/session-watcher.js';
 // MCP
-export type { SparnMcpServerOptions } from './mcp/server.js';
-export { createSparnMcpServer } from './mcp/server.js';
+export type { CortexMcpServerOptions } from './mcp/server.js';
+export { createCortexMcpServer } from './mcp/server.js';
 export type {
   AgentAdapter,
   OptimizationResult,
@@ -95,10 +95,10 @@ export type {
 } from './types/adapter.js';
 export type {
   AgentType,
+  CortexConfig,
   DecayConfig,
   PruningConfig,
   RealtimeConfig,
-  SparnConfig,
   StatesConfig,
   UIConfig,
 } from './types/config.js';

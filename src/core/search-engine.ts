@@ -83,7 +83,7 @@ function ripgrepSearch(query: string, projectRoot: string, opts: SearchOpts = {}
       '--glob',
       '!.git',
       '--glob',
-      '!.sparn',
+      '!.cortex',
       '--glob',
       '!coverage',
     );
@@ -134,7 +134,7 @@ function ripgrepSearch(query: string, projectRoot: string, opts: SearchOpts = {}
 function collectIndexableFiles(
   dir: string,
   projectRoot: string,
-  ignoreDirs = ['node_modules', 'dist', '.git', '.sparn', 'coverage'],
+  ignoreDirs = ['node_modules', 'dist', '.git', '.cortex', 'coverage'],
   exts = ['.ts', '.tsx', '.js', '.jsx', '.json', '.md', '.yaml', '.yml'],
 ): string[] {
   const files: string[] = [];

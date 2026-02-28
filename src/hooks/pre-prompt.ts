@@ -20,8 +20,8 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { formatDashboardStats } from './dashboard-stats.js';
 
-const DEBUG = process.env['SPARN_DEBUG'] === 'true';
-const LOG_FILE = process.env['SPARN_LOG_FILE'] || join(homedir(), '.sparn-hook.log');
+const DEBUG = process.env['CORTEX_DEBUG'] === 'true';
+const LOG_FILE = process.env['CORTEX_LOG_FILE'] || join(homedir(), '.cortex-hook.log');
 
 function log(message: string): void {
   if (DEBUG) {
@@ -38,7 +38,7 @@ interface HookInput {
   prompt?: string;
 }
 
-const CACHE_FILE = join(homedir(), '.sparn', 'hook-state-cache.json');
+const CACHE_FILE = join(homedir(), '.cortex', 'hook-state-cache.json');
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 interface CacheEntry {
@@ -97,7 +97,7 @@ async function main(): Promise<void> {
 
     // --- Dashboard stats (always attempted, not cached) ---
     const cwd = input.cwd || process.cwd();
-    const dbPath = resolve(cwd, '.sparn/memory.db');
+    const dbPath = resolve(cwd, '.cortex/memory.db');
     let dashboardStats: string | null = null;
     try {
       dashboardStats = formatDashboardStats(dbPath, cwd);
@@ -124,8 +124,8 @@ async function main(): Promise<void> {
       } else if (sizeMB > 2) {
         sizeHint =
           sizeMB > 5
-            ? `[sparn] Session transcript is ${sizeMB.toFixed(1)}MB. Context is very large. Prefer concise responses and avoid re-reading files already in context.`
-            : `[sparn] Session transcript is ${sizeMB.toFixed(1)}MB. Context is growing. Be concise where possible.`;
+            ? `[cortex] Session transcript is ${sizeMB.toFixed(1)}MB. Context is very large. Prefer concise responses and avoid re-reading files already in context.`
+            : `[cortex] Session transcript is ${sizeMB.toFixed(1)}MB. Context is growing. Be concise where possible.`;
         writeCache(cacheKey, sizeHint);
         log(`Injecting optimization hint: ${sizeHint}`);
       }

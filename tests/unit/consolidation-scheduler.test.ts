@@ -8,18 +8,18 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createKVMemory } from '../../src/core/kv-memory.js';
 import { createConsolidationScheduler } from '../../src/daemon/consolidation-scheduler.js';
-import type { SparnConfig } from '../../src/types/config.js';
+import type { CortexConfig } from '../../src/types/config.js';
 import { DEFAULT_CONFIG } from '../../src/types/config.js';
 
 describe('Consolidation Scheduler', () => {
   let testDir: string;
   let dbPath: string;
   let logPath: string;
-  let config: SparnConfig;
+  let config: CortexConfig;
 
   beforeEach(() => {
     // Create test directory
-    testDir = join(tmpdir(), `sparn-scheduler-test-${Date.now()}`);
+    testDir = join(tmpdir(), `cortex-scheduler-test-${Date.now()}`);
     mkdirSync(testDir, { recursive: true });
 
     dbPath = join(testDir, 'test-memory.db');

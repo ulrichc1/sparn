@@ -3,7 +3,7 @@
  */
 
 import { resolve } from 'node:path';
-import type { PlanStep, SparnPlan } from '../../core/workflow-planner.js';
+import type { CortexPlan, PlanStep } from '../../core/workflow-planner.js';
 import { createWorkflowPlanner } from '../../core/workflow-planner.js';
 
 export interface PlanCommandOptions {
@@ -15,7 +15,7 @@ export interface PlanCommandOptions {
 }
 
 export interface PlanCommandResult {
-  plan: SparnPlan;
+  plan: CortexPlan;
   json?: string;
   message: string;
 }

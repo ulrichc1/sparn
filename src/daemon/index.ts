@@ -7,18 +7,18 @@
 
 import { appendFileSync, existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { createKVMemory } from '../core/kv-memory.js';
-import type { SparnConfig } from '../types/config.js';
+import type { CortexConfig } from '../types/config.js';
 import { setPreciseTokenCounting } from '../utils/tokenizer.js';
 import { createConsolidationScheduler } from './consolidation-scheduler.js';
 import { createSessionWatcher } from './session-watcher.js';
 
 // Parse config from environment or config file
-let configJson = process.env['SPARN_CONFIG'];
-let pidFile = process.env['SPARN_PID_FILE'];
-let logFile = process.env['SPARN_LOG_FILE'];
+let configJson = process.env['CORTEX_CONFIG'];
+let pidFile = process.env['CORTEX_PID_FILE'];
+let logFile = process.env['CORTEX_LOG_FILE'];
 
 // On Windows, env vars may not survive process detachment - read from config file
-const configFilePath = process.env['SPARN_CONFIG_FILE'];
+const configFilePath = process.env['CORTEX_CONFIG_FILE'];
 if ((!configJson || !pidFile || !logFile) && configFilePath && existsSync(configFilePath)) {
   const fileConfig = JSON.parse(readFileSync(configFilePath, 'utf-8'));
   configJson = configJson || JSON.stringify(fileConfig.config);
@@ -31,7 +31,7 @@ if (!configJson || !pidFile || !logFile) {
   process.exit(1);
 }
 
-const config: SparnConfig = JSON.parse(configJson);
+const config: CortexConfig = JSON.parse(configJson);
 
 // Enable precise token counting if configured
 if (config.realtime?.preciseTokenCounting) {
@@ -134,7 +134,7 @@ watcher
     ) {
       try {
         // Create memory instance
-        memory = await createKVMemory('.sparn/memory.db');
+        memory = await createKVMemory('.cortex/memory.db');
 
         // Create and start scheduler
         scheduler = createConsolidationScheduler({

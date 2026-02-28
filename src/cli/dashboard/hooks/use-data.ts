@@ -174,7 +174,7 @@ async function refreshFast(
       const { readFileSync } = await import('node:fs');
       const { resolve } = await import('node:path');
       const { load: parseYAML } = await import('js-yaml');
-      const configPath = resolve(projectRoot, '.sparn/config.yaml');
+      const configPath = resolve(projectRoot, '.cortex/config.yaml');
       const configContent = readFileSync(configPath, 'utf-8');
       // biome-ignore lint/suspicious/noExplicitAny: YAML returns unknown
       const config = parseYAML(configContent) as any;

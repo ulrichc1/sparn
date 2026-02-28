@@ -1,5 +1,5 @@
 /**
- * Configuration types for Sparn behavior customization.
+ * Configuration types for Cortex behavior customization.
  */
 
 /**
@@ -73,10 +73,10 @@ export interface RealtimeConfig {
   /** File patterns to watch for changes (default: ['**\/*.jsonl']) */
   watchPatterns: string[];
 
-  /** Daemon PID file path (default: '.sparn/daemon.pid') */
+  /** Daemon PID file path (default: '.cortex/daemon.pid') */
   pidFile: string;
 
-  /** Daemon log file path (default: '.sparn/daemon.log') */
+  /** Daemon log file path (default: '.cortex/daemon.log') */
   logFile: string;
 
   /** Debounce delay in milliseconds for file changes (default: 5000) */
@@ -96,9 +96,9 @@ export interface RealtimeConfig {
 }
 
 /**
- * Complete Sparn configuration.
+ * Complete Cortex configuration.
  */
-export interface SparnConfig {
+export interface CortexConfig {
   pruning: PruningConfig;
   decay: DecayConfig;
   states: StatesConfig;
@@ -115,7 +115,7 @@ export interface SparnConfig {
 /**
  * Default configuration values.
  */
-export const DEFAULT_CONFIG: SparnConfig = {
+export const DEFAULT_CONFIG: CortexConfig = {
   pruning: {
     threshold: 5,
     aggressiveness: 50,
@@ -139,8 +139,8 @@ export const DEFAULT_CONFIG: SparnConfig = {
     tokenBudget: 40000,
     autoOptimizeThreshold: 60000,
     watchPatterns: ['**/*.jsonl'],
-    pidFile: '.sparn/daemon.pid',
-    logFile: '.sparn/daemon.log',
+    pidFile: '.cortex/daemon.pid',
+    logFile: '.cortex/daemon.log',
     debounceMs: 5000,
     incremental: true,
     windowSize: 500,

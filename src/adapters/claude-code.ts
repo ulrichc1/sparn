@@ -11,7 +11,7 @@ import { createConfidenceStates } from '../core/confidence-states.js';
 import { createEngramScorer } from '../core/engram-scorer.js';
 import type { KVMemory } from '../core/kv-memory.js';
 import type { AgentAdapter, OptimizationResult, OptimizeOptions } from '../types/adapter.js';
-import type { SparnConfig } from '../types/config.js';
+import type { CortexConfig } from '../types/config.js';
 import { parseClaudeCodeContext } from '../utils/context-parser.js';
 import { estimateTokens } from '../utils/tokenizer.js';
 
@@ -48,10 +48,10 @@ const CLAUDE_CODE_PROFILE = {
 /**
  * Create a Claude Code adapter instance
  * @param memory - KV memory store
- * @param config - Sparn configuration
+ * @param config - Cortex configuration
  * @returns AgentAdapter instance optimized for Claude Code
  */
-export function createClaudeCodeAdapter(memory: KVMemory, config: SparnConfig): AgentAdapter {
+export function createClaudeCodeAdapter(memory: KVMemory, config: CortexConfig): AgentAdapter {
   // Create core modules with Claude Code-optimized settings
   const pruner = createBudgetPruner({
     tokenBudget: config.realtime.tokenBudget,

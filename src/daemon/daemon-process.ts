@@ -12,17 +12,17 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { SparnConfig } from '../types/config.js';
+import type { CortexConfig } from '../types/config.js';
 
 export interface DaemonCommand {
   /** Start the daemon */
-  start(config: SparnConfig): Promise<DaemonStartResult>;
+  start(config: CortexConfig): Promise<DaemonStartResult>;
 
   /** Stop the daemon */
-  stop(config: SparnConfig): Promise<DaemonStopResult>;
+  stop(config: CortexConfig): Promise<DaemonStopResult>;
 
   /** Get daemon status */
-  status(config: SparnConfig): Promise<DaemonStatusResult>;
+  status(config: CortexConfig): Promise<DaemonStatusResult>;
 }
 
 export interface DaemonStartResult {
@@ -104,7 +104,7 @@ export function createDaemonCommand(): DaemonCommand {
     }
   }
 
-  async function start(config: SparnConfig): Promise<DaemonStartResult> {
+  async function start(config: CortexConfig): Promise<DaemonStartResult> {
     const { pidFile, logFile } = config.realtime;
 
     // Check if already running
@@ -129,9 +129,9 @@ export function createDaemonCommand(): DaemonCommand {
 
       const childEnv = {
         ...process.env,
-        SPARN_CONFIG: JSON.stringify(config),
-        SPARN_PID_FILE: pidFile,
-        SPARN_LOG_FILE: logFile,
+        CORTEX_CONFIG: JSON.stringify(config),
+        CORTEX_PID_FILE: pidFile,
+        CORTEX_LOG_FILE: logFile,
       };
 
       // On Windows with Git Bash/MINGW, Node's detached:true doesn't
@@ -146,9 +146,9 @@ export function createDaemonCommand(): DaemonCommand {
         const launcherCode = [
           `import { readFileSync } from 'node:fs';`,
           `const cfg = JSON.parse(readFileSync(${JSON.stringify(configFile)}, 'utf-8'));`,
-          `process.env.SPARN_CONFIG = JSON.stringify(cfg.config);`,
-          `process.env.SPARN_PID_FILE = cfg.pidFile;`,
-          `process.env.SPARN_LOG_FILE = cfg.logFile;`,
+          `process.env.CORTEX_CONFIG = JSON.stringify(cfg.config);`,
+          `process.env.CORTEX_PID_FILE = cfg.pidFile;`,
+          `process.env.CORTEX_LOG_FILE = cfg.logFile;`,
           `await import(${JSON.stringify(`file:///${daemonPath.replace(/\\/g, '/')}`)});`,
         ].join('\n');
         writeFileSync(launcherFile, launcherCode, 'utf-8');
@@ -223,7 +223,7 @@ export function createDaemonCommand(): DaemonCommand {
     }
   }
 
-  async function stop(config: SparnConfig): Promise<DaemonStopResult> {
+  async function stop(config: CortexConfig): Promise<DaemonStopResult> {
     const { pidFile } = config.realtime;
 
     const status = isDaemonRunning(pidFile);
@@ -294,7 +294,7 @@ export function createDaemonCommand(): DaemonCommand {
     }
   }
 
-  async function status(config: SparnConfig): Promise<DaemonStatusResult> {
+  async function status(config: CortexConfig): Promise<DaemonStatusResult> {
     const { pidFile } = config.realtime;
 
     const daemonStatus = isDaemonRunning(pidFile);

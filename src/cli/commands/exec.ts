@@ -3,7 +3,7 @@
  */
 
 import { resolve } from 'node:path';
-import type { PlanExecConstraints, SparnPlan } from '../../core/workflow-planner.js';
+import type { CortexPlan, PlanExecConstraints } from '../../core/workflow-planner.js';
 import { createWorkflowPlanner } from '../../core/workflow-planner.js';
 
 export interface ExecCommandOptions {
@@ -12,7 +12,7 @@ export interface ExecCommandOptions {
 }
 
 export interface ExecCommandResult {
-  plan: SparnPlan;
+  plan: CortexPlan;
   constraints: PlanExecConstraints;
   json?: string;
   message: string;

@@ -4,7 +4,7 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { load as parseYAML, dump as stringifyYAML } from 'js-yaml';
-import type { SparnConfig } from '../../types/config.js';
+import type { CortexConfig } from '../../types/config.js';
 
 export interface ConfigCommandOptions {
   /** Path to config.yaml file */
@@ -173,7 +173,7 @@ export async function configCommand(options: ConfigCommandOptions): Promise<Conf
   try {
     // Read config file
     const configYAML = readFileSync(configPath, 'utf-8');
-    const config = parseYAML(configYAML) as SparnConfig;
+    const config = parseYAML(configYAML) as CortexConfig;
 
     // No subcommand: open editor or return JSON
     if (!subcommand) {
@@ -203,7 +203,7 @@ export async function configCommand(options: ConfigCommandOptions): Promise<Conf
       if (!schema) {
         return {
           success: false,
-          error: `Invalid key: ${key}. Run 'sparn config' to see available keys.`,
+          error: `Invalid key: ${key}. Run 'cortex config' to see available keys.`,
         };
       }
 
@@ -247,7 +247,7 @@ export async function configCommand(options: ConfigCommandOptions): Promise<Conf
       if (!schema) {
         return {
           success: false,
-          error: `Invalid key: ${key}. Run 'sparn config' to see available keys.`,
+          error: `Invalid key: ${key}. Run 'cortex config' to see available keys.`,
         };
       }
 

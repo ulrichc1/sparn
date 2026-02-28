@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const AUDIO_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../audio');
-const DISABLED = process.env['SPARN_AUDIO'] === 'false';
+const DISABLED = process.env['CORTEX_AUDIO'] === 'false';
 
 export function playSound(filename: string): void {
   if (DISABLED) return;

@@ -14,8 +14,8 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { estimateTokens } from '../utils/tokenizer.js';
 
-const DEBUG = process.env['SPARN_DEBUG'] === 'true';
-const LOG_FILE = process.env['SPARN_LOG_FILE'] || join(homedir(), '.sparn-hook.log');
+const DEBUG = process.env['CORTEX_DEBUG'] === 'true';
+const LOG_FILE = process.env['CORTEX_LOG_FILE'] || join(homedir(), '.cortex-hook.log');
 
 // Only add summaries for outputs over this many estimated tokens
 const SUMMARY_THRESHOLD = 3000;
@@ -56,7 +56,7 @@ function summarizeBash(text: string, command: string): string {
       (l) => /(pass|fail|skip|error|Tests?:|Test Suites?:)/i.test(l) || /^\s*(PASS|FAIL)\s/.test(l),
     );
     if (resultLines.length > 0) {
-      return `[sparn] Test output summary (${lines.length} lines):\n${resultLines.slice(0, 15).join('\n')}`;
+      return `[cortex] Test output summary (${lines.length} lines):\n${resultLines.slice(0, 15).join('\n')}`;
     }
   }
 
@@ -64,7 +64,7 @@ function summarizeBash(text: string, command: string): string {
   if (/(error|warning|failed)/i.test(text)) {
     const errorLines = lines.filter((l) => /(error|warning|failed|fatal)/i.test(l));
     if (errorLines.length > 0) {
-      return `[sparn] Build output summary (${errorLines.length} errors/warnings from ${lines.length} lines):\n${errorLines.slice(0, 10).join('\n')}`;
+      return `[cortex] Build output summary (${errorLines.length} errors/warnings from ${lines.length} lines):\n${errorLines.slice(0, 10).join('\n')}`;
     }
   }
 
@@ -75,11 +75,11 @@ function summarizeBash(text: string, command: string): string {
       const match = line.match(/^diff --git a\/(.*?) b\/(.*)/);
       if (match?.[2]) files.push(match[2]);
     }
-    return `[sparn] Git diff: ${files.length} files changed: ${files.join(', ')}`;
+    return `[cortex] Git diff: ${files.length} files changed: ${files.join(', ')}`;
   }
 
   // Generic: show line count and first/last few lines
-  return `[sparn] Command \`${command}\` produced ${lines.length} lines of output. First 3: ${lines.slice(0, 3).join(' | ')}`;
+  return `[cortex] Command \`${command}\` produced ${lines.length} lines of output. First 3: ${lines.slice(0, 3).join(' | ')}`;
 }
 
 /**
@@ -94,7 +94,7 @@ function summarizeFileRead(text: string, filePath: string): string {
   const functions = lines.filter((l) => /function\s+\w+/.test(l));
   const classes = lines.filter((l) => /class\s+\w+/.test(l));
 
-  const parts = [`[sparn] File ${filePath}: ${lines.length} lines, ~${tokens} tokens.`];
+  const parts = [`[cortex] File ${filePath}: ${lines.length} lines, ~${tokens} tokens.`];
 
   if (exports.length > 0) {
     parts.push(
@@ -138,10 +138,10 @@ function summarizeSearch(text: string, pattern: string): string {
       .slice(0, 5)
       .map(([f, c]) => `${f} (${c})`)
       .join(', ');
-    return `[sparn] Search for "${pattern}": ${lines.length} matches across ${fileMap.size} files. Top files: ${summary}`;
+    return `[cortex] Search for "${pattern}": ${lines.length} matches across ${fileMap.size} files. Top files: ${summary}`;
   }
 
-  return `[sparn] Search for "${pattern}": ${lines.length} result lines`;
+  return `[cortex] Search for "${pattern}": ${lines.length} result lines`;
 }
 
 async function main(): Promise<void> {
@@ -193,7 +193,7 @@ async function main(): Promise<void> {
       }
       default: {
         const lines = text.split('\n');
-        summary = `[sparn] ${toolName} output: ${lines.length} lines, ~${tokens} tokens`;
+        summary = `[cortex] ${toolName} output: ${lines.length} lines, ~${tokens} tokens`;
         break;
       }
     }

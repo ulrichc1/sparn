@@ -204,7 +204,7 @@ describe('v1.3.0 Fix Verification', () => {
     let testDir: string;
 
     beforeEach(() => {
-      testDir = join(tmpdir(), `sparn-graph-test-${Date.now()}`);
+      testDir = join(tmpdir(), `cortex-graph-test-${Date.now()}`);
       mkdirSync(join(testDir, 'src'), { recursive: true });
     });
 
@@ -231,7 +231,7 @@ describe('v1.3.0 Fix Verification', () => {
     let testDir: string;
 
     beforeEach(() => {
-      testDir = join(tmpdir(), `sparn-tracker-test-${Date.now()}`);
+      testDir = join(tmpdir(), `cortex-tracker-test-${Date.now()}`);
       mkdirSync(testDir, { recursive: true });
     });
 
@@ -287,7 +287,7 @@ describe('v1.3.0 Fix Verification', () => {
     let dbPath: string;
 
     beforeEach(() => {
-      testDir = join(tmpdir(), `sparn-kv-test-${Date.now()}`);
+      testDir = join(tmpdir(), `cortex-kv-test-${Date.now()}`);
       mkdirSync(testDir, { recursive: true });
       dbPath = join(testDir, 'test.db');
     });
@@ -351,7 +351,7 @@ describe('v1.3.0 Fix Verification', () => {
       const { createKVMemory } = await import('../../src/core/kv-memory.js');
       const { DEFAULT_CONFIG } = await import('../../src/types/config.js');
 
-      const testDir = join(tmpdir(), `sparn-adapter-test-${Date.now()}`);
+      const testDir = join(tmpdir(), `cortex-adapter-test-${Date.now()}`);
       mkdirSync(testDir, { recursive: true });
       const dbPath = join(testDir, 'test.db');
 

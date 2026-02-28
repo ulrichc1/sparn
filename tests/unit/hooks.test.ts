@@ -55,7 +55,7 @@ describe('Hooks Command', () => {
                 hooks: [
                   {
                     type: 'command',
-                    command: 'node /path/to/sparn/dist/hooks/pre-prompt.js',
+                    command: 'node /path/to/cortex/dist/hooks/pre-prompt.js',
                     timeout: 10,
                   },
                 ],
@@ -67,7 +67,7 @@ describe('Hooks Command', () => {
                 hooks: [
                   {
                     type: 'command',
-                    command: 'node /path/to/sparn/dist/hooks/post-tool-result.js',
+                    command: 'node /path/to/cortex/dist/hooks/post-tool-result.js',
                     timeout: 10,
                   },
                 ],
@@ -78,7 +78,7 @@ describe('Hooks Command', () => {
                 hooks: [
                   {
                     type: 'command',
-                    command: 'node /path/to/sparn/dist/hooks/stop-docs-refresh.js',
+                    command: 'node /path/to/cortex/dist/hooks/stop-docs-refresh.js',
                     timeout: 10,
                   },
                 ],
@@ -164,7 +164,7 @@ describe('Hooks Command', () => {
       expect(result.installed).toBe(false);
     });
 
-    it('should remove only sparn hooks', async () => {
+    it('should remove only cortex hooks', async () => {
       writeFileSync(
         settingsPath,
         JSON.stringify({
@@ -175,7 +175,7 @@ describe('Hooks Command', () => {
                 hooks: [
                   {
                     type: 'command',
-                    command: 'node /path/to/sparn/dist/hooks/post-tool-result.js',
+                    command: 'node /path/to/cortex/dist/hooks/post-tool-result.js',
                   },
                 ],
               },
@@ -189,7 +189,7 @@ describe('Hooks Command', () => {
                 hooks: [
                   {
                     type: 'command',
-                    command: 'node /path/to/sparn/dist/hooks/pre-prompt.js',
+                    command: 'node /path/to/cortex/dist/hooks/pre-prompt.js',
                   },
                 ],
               },
@@ -199,7 +199,7 @@ describe('Hooks Command', () => {
                 hooks: [
                   {
                     type: 'command',
-                    command: 'node /path/to/sparn/dist/hooks/stop-docs-refresh.js',
+                    command: 'node /path/to/cortex/dist/hooks/stop-docs-refresh.js',
                   },
                 ],
               },
@@ -215,7 +215,7 @@ describe('Hooks Command', () => {
       expect(result.installed).toBe(false);
 
       const settings = JSON.parse(readFileSync(settingsPath, 'utf-8'));
-      // Sparn hooks should be gone
+      // Cortex hooks should be gone
       expect(settings.hooks.UserPromptSubmit).toBeUndefined();
       expect(settings.hooks.Stop).toBeUndefined();
       // Custom hook should remain
@@ -233,7 +233,7 @@ describe('Hooks Command', () => {
       expect(result.installed).toBe(false);
     });
 
-    it('should detect installed sparn hooks', async () => {
+    it('should detect installed cortex hooks', async () => {
       writeFileSync(
         settingsPath,
         JSON.stringify({
@@ -244,7 +244,7 @@ describe('Hooks Command', () => {
                 hooks: [
                   {
                     type: 'command',
-                    command: 'node /path/to/sparn/dist/hooks/post-tool-result.js',
+                    command: 'node /path/to/cortex/dist/hooks/post-tool-result.js',
                   },
                 ],
               },
@@ -254,7 +254,7 @@ describe('Hooks Command', () => {
                 hooks: [
                   {
                     type: 'command',
-                    command: 'node /path/to/sparn/dist/hooks/pre-prompt.js',
+                    command: 'node /path/to/cortex/dist/hooks/pre-prompt.js',
                   },
                 ],
               },
@@ -264,7 +264,7 @@ describe('Hooks Command', () => {
                 hooks: [
                   {
                     type: 'command',
-                    command: 'node /path/to/sparn/dist/hooks/stop-docs-refresh.js',
+                    command: 'node /path/to/cortex/dist/hooks/stop-docs-refresh.js',
                   },
                 ],
               },
@@ -278,12 +278,12 @@ describe('Hooks Command', () => {
 
       expect(result.success).toBe(true);
       expect(result.installed).toBe(true);
-      expect(result.hookPaths?.prePrompt).toContain('sparn');
-      expect(result.hookPaths?.postToolResult).toContain('sparn');
-      expect(result.hookPaths?.stopDocsRefresh).toContain('sparn');
+      expect(result.hookPaths?.prePrompt).toContain('cortex');
+      expect(result.hookPaths?.postToolResult).toContain('cortex');
+      expect(result.hookPaths?.stopDocsRefresh).toContain('cortex');
     });
 
-    it('should report not installed when only non-sparn hooks exist', async () => {
+    it('should report not installed when only non-cortex hooks exist', async () => {
       writeFileSync(
         settingsPath,
         JSON.stringify({

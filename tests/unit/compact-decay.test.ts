@@ -31,7 +31,7 @@ describe('Compact with Decay-Based Removal', () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = join(tmpdir(), `sparn-compact-test-${Date.now()}`);
+    tempDir = join(tmpdir(), `cortex-compact-test-${Date.now()}`);
     mkdirSync(tempDir, { recursive: true });
     memory = await createKVMemory(join(tempDir, 'test.db'));
   });

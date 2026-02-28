@@ -1,5 +1,5 @@
 /**
- * Core memory entry types for Sparn's context optimization engine.
+ * Core memory entry types for Cortex's context optimization engine.
  * Memory model with time-based decay and state transitions.
  */
 

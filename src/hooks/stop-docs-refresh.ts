@@ -4,7 +4,7 @@
  *
  * Fires at the end of each Claude response. Checks if any src/ files
  * have been modified since the last docs generation and, if so, spawns
- * `sparn docs` as a detached background process (fire-and-forget).
+ * `cortex docs` as a detached background process (fire-and-forget).
  *
  * CRITICAL: Always exits 0 (never disrupts Claude Code).
  */
@@ -23,8 +23,8 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const DEBUG = process.env['SPARN_DEBUG'] === 'true';
-const LOG_FILE = process.env['SPARN_LOG_FILE'] || join(homedir(), '.sparn-hook.log');
+const DEBUG = process.env['CORTEX_DEBUG'] === 'true';
+const LOG_FILE = process.env['CORTEX_LOG_FILE'] || join(homedir(), '.cortex-hook.log');
 
 function log(message: string): void {
   if (DEBUG) {
@@ -76,9 +76,9 @@ function getMaxSourceMtime(srcDir: string): number {
 /**
  * Read the last generation timestamp
  */
-function readTimestamp(sparnDir: string): number {
+function readTimestamp(cortexDir: string): number {
   try {
-    const tsFile = join(sparnDir, TIMESTAMP_FILE);
+    const tsFile = join(cortexDir, TIMESTAMP_FILE);
     if (!existsSync(tsFile)) return 0;
     const content = readFileSync(tsFile, 'utf-8').trim();
     const ts = Number(content);
@@ -91,19 +91,19 @@ function readTimestamp(sparnDir: string): number {
 /**
  * Write the current timestamp
  */
-function writeTimestamp(sparnDir: string): void {
+function writeTimestamp(cortexDir: string): void {
   try {
-    if (!existsSync(sparnDir)) {
-      mkdirSync(sparnDir, { recursive: true });
+    if (!existsSync(cortexDir)) {
+      mkdirSync(cortexDir, { recursive: true });
     }
-    writeFileSync(join(sparnDir, TIMESTAMP_FILE), String(Date.now()), 'utf-8');
+    writeFileSync(join(cortexDir, TIMESTAMP_FILE), String(Date.now()), 'utf-8');
   } catch {
     // Best-effort
   }
 }
 
 /**
- * Spawn sparn docs as a detached background process
+ * Spawn cortex docs as a detached background process
  */
 function spawnDocsRefresh(cwd: string): void {
   try {
@@ -155,15 +155,15 @@ async function main(): Promise<void> {
       return;
     }
 
-    const sparnDir = join(cwd, '.sparn');
-    const lastGenTimestamp = readTimestamp(sparnDir);
+    const cortexDir = join(cwd, '.cortex');
+    const lastGenTimestamp = readTimestamp(cortexDir);
     const maxSourceMtime = getMaxSourceMtime(srcDir);
 
     log(`Last gen: ${lastGenTimestamp}, max mtime: ${maxSourceMtime}`);
 
     if (maxSourceMtime > lastGenTimestamp) {
       log('Source files changed since last generation, triggering refresh');
-      writeTimestamp(sparnDir);
+      writeTimestamp(cortexDir);
       spawnDocsRefresh(cwd);
     } else {
       log('No source changes detected, skipping');

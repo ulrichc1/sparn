@@ -1,13 +1,13 @@
 /**
- * Sparn MCP Server - Model Context Protocol server implementation
+ * Cortex MCP Server - Model Context Protocol server implementation
  *
- * Exposes Sparn context optimization as MCP tools, enabling integration
+ * Exposes Cortex context optimization as MCP tools, enabling integration
  * with Claude Desktop, VS Code, and other MCP clients.
  *
  * Tools:
- * - sparn_optimize: Optimize context with configurable options
- * - sparn_stats: Get optimization statistics
- * - sparn_consolidate: Run memory consolidation
+ * - cortex_optimize: Optimize context with configurable options
+ * - cortex_stats: Get optimization statistics
+ * - cortex_consolidate: Run memory consolidation
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -15,31 +15,31 @@ import { z } from 'zod';
 import { createGenericAdapter } from '../adapters/generic.js';
 import type { KVMemory } from '../core/kv-memory.js';
 import { createSleepCompressor } from '../core/sleep-compressor.js';
-import type { SparnConfig } from '../types/config.js';
+import type { CortexConfig } from '../types/config.js';
 import { DEFAULT_CONFIG } from '../types/config.js';
 
 /**
- * Options for creating the Sparn MCP server.
+ * Options for creating the Cortex MCP server.
  */
-export interface SparnMcpServerOptions {
+export interface CortexMcpServerOptions {
   /** KV memory store instance */
   memory: KVMemory;
-  /** Sparn configuration (defaults to DEFAULT_CONFIG) */
-  config?: SparnConfig;
+  /** Cortex configuration (defaults to DEFAULT_CONFIG) */
+  config?: CortexConfig;
 }
 
 /**
- * Create and configure the Sparn MCP server with all tools registered.
+ * Create and configure the Cortex MCP server with all tools registered.
  *
  * @param options - Server options including memory store and config
  * @returns Configured McpServer instance ready to connect to a transport
  */
-export function createSparnMcpServer(options: SparnMcpServerOptions): McpServer {
+export function createCortexMcpServer(options: CortexMcpServerOptions): McpServer {
   const { memory, config = DEFAULT_CONFIG } = options;
 
   const server = new McpServer({
-    name: 'sparn',
-    version: '1.4.0',
+    name: 'cortex',
+    version: '1.0.0',
   });
 
   registerOptimizeTool(server, memory, config);
@@ -51,16 +51,16 @@ export function createSparnMcpServer(options: SparnMcpServerOptions): McpServer 
 }
 
 /**
- * Register the sparn_optimize tool.
+ * Register the cortex_optimize tool.
  *
  * Optimizes input context using the multi-stage pipeline:
  * critical event detection, relevance scoring, entry classification, and sparse pruning.
  */
-function registerOptimizeTool(server: McpServer, memory: KVMemory, config: SparnConfig): void {
+function registerOptimizeTool(server: McpServer, memory: KVMemory, config: CortexConfig): void {
   server.registerTool(
-    'sparn_optimize',
+    'cortex_optimize',
     {
-      title: 'Sparn Optimize',
+      title: 'Cortex Optimize',
       description:
         'Optimize context using multi-stage pruning. ' +
         'Applies critical event detection, relevance scoring, entry classification, ' +
@@ -135,16 +135,16 @@ function registerOptimizeTool(server: McpServer, memory: KVMemory, config: Sparn
 }
 
 /**
- * Register the sparn_stats tool.
+ * Register the cortex_stats tool.
  *
  * Returns optimization statistics from the memory store, including
  * total commands run, tokens saved, and average reduction.
  */
 function registerStatsTool(server: McpServer, memory: KVMemory): void {
   server.registerTool(
-    'sparn_stats',
+    'cortex_stats',
     {
-      title: 'Sparn Stats',
+      title: 'Cortex Stats',
       description:
         'Get optimization statistics including total commands run, ' +
         'tokens saved, and average reduction percentage.',
@@ -239,16 +239,16 @@ function registerStatsTool(server: McpServer, memory: KVMemory): void {
 }
 
 /**
- * Register the sparn_search tool.
+ * Register the cortex_search tool.
  *
  * Searches memory entries using FTS5 full-text search.
  * Returns matching entries with score, state, and rank info.
  */
 function registerSearchTool(server: McpServer, memory: KVMemory): void {
   server.registerTool(
-    'sparn_search',
+    'cortex_search',
     {
-      title: 'Sparn Search',
+      title: 'Cortex Search',
       description:
         'Search memory entries using full-text search. ' +
         'Returns matching entries with relevance ranking, score, and state information.',
@@ -304,16 +304,16 @@ function registerSearchTool(server: McpServer, memory: KVMemory): void {
 }
 
 /**
- * Register the sparn_consolidate tool.
+ * Register the cortex_consolidate tool.
  *
  * Runs the consolidation process, which removes decayed entries
  * and merges duplicates in the memory store.
  */
 function registerConsolidateTool(server: McpServer, memory: KVMemory): void {
   server.registerTool(
-    'sparn_consolidate',
+    'cortex_consolidate',
     {
-      title: 'Sparn Consolidate',
+      title: 'Cortex Consolidate',
       description:
         'Run memory consolidation. ' +
         'Removes decayed entries and merges duplicates to reclaim space.',

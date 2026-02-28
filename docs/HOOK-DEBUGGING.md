@@ -1,8 +1,8 @@
-# Sparn Hook Debugging Guide
+# Cortex Hook Debugging Guide
 
 ## Overview
 
-Sparn hooks (pre-prompt and post-tool-result) include optional debug logging to help troubleshoot why optimization may or may not be happening.
+Cortex hooks (pre-prompt and post-tool-result) include optional debug logging to help troubleshoot why optimization may or may not be happening.
 
 ## Quick Start
 
@@ -10,30 +10,30 @@ Sparn hooks (pre-prompt and post-tool-result) include optional debug logging to 
 
 **Option 1: Environment Variable (Recommended)**
 ```bash
-export SPARN_DEBUG=true
+export CORTEX_DEBUG=true
 claude --dangerously-skip-permissions
 ```
 
 **Option 2: Add to Shell Profile**
 ```bash
 # Add to ~/.bashrc or ~/.zshrc
-export SPARN_DEBUG=true
-export SPARN_LOG_FILE=~/.sparn-debug.log  # Optional: custom log location
+export CORTEX_DEBUG=true
+export CORTEX_LOG_FILE=~/.cortex-debug.log  # Optional: custom log location
 ```
 
 **Option 3: One-Time Session**
 ```bash
-SPARN_DEBUG=true claude --dangerously-skip-permissions
+CORTEX_DEBUG=true claude --dangerously-skip-permissions
 ```
 
 ### View Logs in Real-Time
 
 ```bash
 # Watch logs as they're written
-tail -f ~/.sparn-hook.log
+tail -f ~/.cortex-hook.log
 
 # Or if you set a custom location:
-tail -f ~/.sparn-debug.log
+tail -f ~/.cortex-debug.log
 ```
 
 ## What Gets Logged
@@ -42,7 +42,7 @@ tail -f ~/.sparn-debug.log
 
 ```
 [2026-02-23T01:30:45.123Z] [pre-prompt] Input tokens: 45234
-[2026-02-23T01:30:45.124Z] [pre-prompt] Using project config: /path/to/.sparn/config.yaml
+[2026-02-23T01:30:45.124Z] [pre-prompt] Using project config: /path/to/.cortex/config.yaml
 [2026-02-23T01:30:45.125Z] [pre-prompt] Threshold: 60000, Budget: 40000
 [2026-02-23T01:30:45.126Z] [pre-prompt] Under threshold (45234 < 60000), passing through
 ```
@@ -50,7 +50,7 @@ tail -f ~/.sparn-debug.log
 **When optimization triggers:**
 ```
 [2026-02-23T01:35:12.456Z] [pre-prompt] Input tokens: 75432
-[2026-02-23T01:35:12.457Z] [pre-prompt] Using project config: /path/to/.sparn/config.yaml
+[2026-02-23T01:35:12.457Z] [pre-prompt] Using project config: /path/to/.cortex/config.yaml
 [2026-02-23T01:35:12.458Z] [pre-prompt] Threshold: 60000, Budget: 40000
 [2026-02-23T01:35:12.459Z] [pre-prompt] Over threshold! Optimizing 75432 tokens to fit 40000 budget
 [2026-02-23T01:35:12.460Z] [pre-prompt] Parsed 234 context entries
@@ -81,17 +81,17 @@ tail -f ~/.sparn-debug.log
 
 ### Issue 1: "No config found, passing through"
 
-**Cause:** Hooks can't find `.sparn/config.yaml`
+**Cause:** Hooks can't find `.cortex/config.yaml`
 
 **Solution:**
 ```bash
-# Initialize Sparn in your project
+# Initialize Cortex in your project
 cd /path/to/project
-sparn init
+cortex init
 
 # Or use global config
-mkdir -p ~/.sparn
-sparn init --global
+mkdir -p ~/.cortex
+cortex init --global
 ```
 
 ### Issue 2: "Under threshold, passing through" (every time)
@@ -102,7 +102,7 @@ sparn init --global
 
 **Option A: Lower the threshold**
 ```yaml
-# .sparn/config.yaml
+# .cortex/config.yaml
 realtime:
   autoOptimizeThreshold: 30000  # Trigger at 30K instead of 60K
   tokenBudget: 20000            # Target 20K
@@ -111,13 +111,13 @@ realtime:
 **Option B: Check your actual token usage**
 ```bash
 # Enable logging
-export SPARN_DEBUG=true
+export CORTEX_DEBUG=true
 
 # Start Claude Code and work for a while
 claude --dangerously-skip-permissions
 
 # Check what token counts hooks are seeing
-tail -f ~/.sparn-hook.log | grep "Input tokens"
+tail -f ~/.cortex-hook.log | grep "Input tokens"
 ```
 
 ### Issue 3: "Config parse error"
@@ -127,10 +127,10 @@ tail -f ~/.sparn-hook.log | grep "Input tokens"
 **Solution:**
 ```bash
 # Validate your config
-cat .sparn/config.yaml
+cat .cortex/config.yaml
 
 # Reinitialize if needed
-sparn init --force
+cortex init --force
 ```
 
 ### Issue 4: Hooks not running at all
@@ -140,7 +140,7 @@ sparn init --force
 **Check installation:**
 ```bash
 cd /path/to/project
-sparn hooks status
+cortex hooks status
 ```
 
 **Expected output:**
@@ -148,14 +148,14 @@ sparn hooks status
 ✓ Project hooks active
 
 Hook paths:
-  prePrompt: node /path/to/sparn/dist/hooks/pre-prompt.js
-  postToolResult: node /path/to/sparn/dist/hooks/post-tool-result.js
+  prePrompt: node /path/to/cortex/dist/hooks/pre-prompt.js
+  postToolResult: node /path/to/cortex/dist/hooks/post-tool-result.js
 ```
 
 **Reinstall if needed:**
 ```bash
-sparn hooks uninstall
-sparn hooks install
+cortex hooks uninstall
+cortex hooks install
 ```
 
 **Verify hooks are in settings.json:**
@@ -167,8 +167,8 @@ cat .claude/settings.json
 ```json
 {
   "hooks": {
-    "prePrompt": "node /path/to/sparn/dist/hooks/pre-prompt.js",
-    "postToolResult": "node /path/to/sparn/dist/hooks/post-tool-result.js"
+    "prePrompt": "node /path/to/cortex/dist/hooks/pre-prompt.js",
+    "postToolResult": "node /path/to/cortex/dist/hooks/post-tool-result.js"
   }
 }
 ```
@@ -180,20 +180,20 @@ cat .claude/settings.json
 1. **DEBUG not enabled:**
 ```bash
 # Check if environment variable is set
-echo $SPARN_DEBUG  # Should output: true
+echo $CORTEX_DEBUG  # Should output: true
 ```
 
 2. **Log file permissions:**
 ```bash
 # Check if log file is writable
-touch ~/.sparn-hook.log
-ls -la ~/.sparn-hook.log
+touch ~/.cortex-hook.log
+ls -la ~/.cortex-hook.log
 ```
 
 3. **Hooks exiting before logging:**
 ```bash
 # Test hooks manually
-echo "test" | SPARN_DEBUG=true node /path/to/sparn/dist/hooks/pre-prompt.js
+echo "test" | CORTEX_DEBUG=true node /path/to/cortex/dist/hooks/pre-prompt.js
 ```
 
 ## Advanced Debugging
@@ -203,7 +203,7 @@ echo "test" | SPARN_DEBUG=true node /path/to/sparn/dist/hooks/pre-prompt.js
 **Test pre-prompt hook:**
 ```bash
 cd /path/to/project
-export SPARN_DEBUG=true
+export CORTEX_DEBUG=true
 
 # Create test context
 cat > test-context.txt << 'EOF'
@@ -213,10 +213,10 @@ Assistant: I'll read the files now.
 EOF
 
 # Run hook
-cat test-context.txt | node ~/.nvm/versions/node/*/lib/node_modules/@ulrichc1/sparn/dist/hooks/pre-prompt.js > output.txt
+cat test-context.txt | node ~/.nvm/versions/node/*/lib/node_modules/@sparn/cortex/dist/hooks/pre-prompt.js > output.txt
 
 # Check log
-cat ~/.sparn-hook.log
+cat ~/.cortex-hook.log
 
 # Compare input vs output tokens
 wc -w test-context.txt output.txt
@@ -228,24 +228,24 @@ wc -w test-context.txt output.txt
 seq 1 1000 | awk '{print "Line "$1": Some log message"}' > test-tool.txt
 
 # Run hook
-export SPARN_DEBUG=true
-cat test-tool.txt | node ~/.nvm/versions/node/*/lib/node_modules/@ulrichc1/sparn/dist/hooks/post-tool-result.js > compressed.txt
+export CORTEX_DEBUG=true
+cat test-tool.txt | node ~/.nvm/versions/node/*/lib/node_modules/@sparn/cortex/dist/hooks/post-tool-result.js > compressed.txt
 
 # Check compression
 wc -l test-tool.txt compressed.txt
-cat ~/.sparn-hook.log | grep post-tool-result
+cat ~/.cortex-hook.log | grep post-tool-result
 ```
 
 ### Monitor Hook Activity During Session
 
 ```bash
 # Terminal 1: Start Claude Code with debug logging
-export SPARN_DEBUG=true
-export SPARN_LOG_FILE=~/sparn-session.log
+export CORTEX_DEBUG=true
+export CORTEX_LOG_FILE=~/cortex-session.log
 claude --dangerously-skip-permissions
 
 # Terminal 2: Watch logs in real-time
-tail -f ~/sparn-session.log
+tail -f ~/cortex-session.log
 
 # Terminal 3: Monitor session file size
 watch -n 5 'find ~/.claude/projects -name "*.jsonl" -exec ls -lh {} \;'
@@ -271,11 +271,11 @@ If your log file gets too large:
 
 ```bash
 # Truncate log
-> ~/.sparn-hook.log
+> ~/.cortex-hook.log
 
 # Or use logrotate
-cat > /etc/logrotate.d/sparn-hooks << 'EOF'
-/home/user/.sparn-hook.log {
+cat > /etc/logrotate.d/cortex-hooks << 'EOF'
+/home/user/.cortex-hook.log {
     daily
     rotate 7
     compress
@@ -337,13 +337,13 @@ Input tokens: 45678 → under threshold → pass through
 If hooks still aren't working after following this guide:
 
 1. Check Claude Code version: `claude --version`
-2. Check Sparn version: `sparn --version`
+2. Check Cortex version: `cortex --version`
 3. Collect debug logs
-4. Open issue at: https://github.com/ulrichc1/sparn/issues
+4. Open issue at: https://github.com/sparn-labs/cortex/issues
 
 Include:
 - Operating system
 - Claude Code version
-- Sparn version
+- Cortex version
 - Debug log excerpt
 - Steps to reproduce

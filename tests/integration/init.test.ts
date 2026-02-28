@@ -1,5 +1,5 @@
 /**
- * Integration tests for `sparn init` command.
+ * Integration tests for `cortex init` command.
  * Tests end-to-end initialization workflow.
  */
 
@@ -9,9 +9,9 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const TEST_DIR = './test-project';
-const _SPARN_DIR = join(TEST_DIR, '.sparn');
+const _CORTEX_DIR = join(TEST_DIR, '.cortex');
 
-describe('sparn init', () => {
+describe('cortex init', () => {
   beforeEach(async () => {
     // Create test project directory
     if (!existsSync(TEST_DIR)) {
@@ -26,9 +26,9 @@ describe('sparn init', () => {
     }
   });
 
-  it('should create .sparn/ directory', async () => {
-    // TODO: Execute `sparn init` command when CLI exists
-    // expect(existsSync(SPARN_DIR)).toBe(true);
+  it('should create .cortex/ directory', async () => {
+    // TODO: Execute `cortex init` command when CLI exists
+    // expect(existsSync(CORTEX_DIR)).toBe(true);
     expect(true).toBe(true); // Placeholder
   });
 

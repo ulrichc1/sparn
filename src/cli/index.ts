@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Sparn CLI entry point.
+ * Cortex CLI entry point.
  * Implements all CLI commands using Commander.js.
  */
 
@@ -15,16 +15,16 @@ import { playCommand, playComplete, playEnd, playStartup } from '../utils/audio.
 import { setPreciseTokenCounting } from '../utils/tokenizer.js';
 import { getBanner } from './ui/banner.js';
 
-// Get sparn's own version from its package.json
+// Get cortex's own version from its package.json
 function getVersion(): string {
   try {
-    // Read from sparn's own package.json (relative to compiled module)
+    // Read from cortex's own package.json (relative to compiled module)
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
     const pkg = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf-8'));
     return pkg.version;
   } catch {
-    return '1.4.0';
+    return '1.0.0';
   }
 }
 
@@ -32,7 +32,7 @@ const VERSION = getVersion();
 
 // Load precise token counting setting from config if available
 try {
-  const configPath = resolve(process.cwd(), '.sparn/config.yaml');
+  const configPath = resolve(process.cwd(), '.cortex/config.yaml');
   const configContent = readFileSync(configPath, 'utf-8');
   // biome-ignore lint/suspicious/noExplicitAny: parseYAML returns unknown
   const config = loadYAML(configContent) as any;
@@ -70,21 +70,21 @@ async function handleError(error: Error | unknown, context?: string): Promise<vo
   // Database errors - provide recovery suggestions
   if (errorMsg.includes('SQLITE') || errorMsg.includes('database')) {
     console.error(synapseViolet('\n💡 Database issue detected:'));
-    console.error('  Try running: rm -rf .sparn/ && sparn init');
-    console.error('  This will reinitialize your Sparn database.\n');
+    console.error('  Try running: rm -rf .cortex/ && cortex init');
+    console.error('  This will reinitialize your Cortex database.\n');
   }
 
   // Permission errors
   if (errorMsg.includes('EACCES') || errorMsg.includes('permission')) {
     console.error(synapseViolet('\n💡 Permission issue detected:'));
-    console.error('  Check file permissions in .sparn/ directory');
-    console.error('  Try: chmod -R u+rw .sparn/\n');
+    console.error('  Check file permissions in .cortex/ directory');
+    console.error('  Try: chmod -R u+rw .cortex/\n');
   }
 
   // File not found errors
   if (errorMsg.includes('ENOENT') || errorMsg.includes('no such file')) {
     console.error(synapseViolet('\n💡 File not found:'));
-    console.error('  Make sure you have run: sparn init');
+    console.error('  Make sure you have run: cortex init');
     console.error('  Or check that the specified file exists.\n');
   }
 
@@ -96,11 +96,11 @@ async function handleError(error: Error | unknown, context?: string): Promise<vo
   }
 
   // Show stack trace in verbose mode
-  if (process.env['SPARN_DEBUG'] === 'true' && stack) {
+  if (process.env['CORTEX_DEBUG'] === 'true' && stack) {
     console.error(errorRed('\nStack trace:'));
     console.error(stack);
   } else {
-    console.error('  Run with SPARN_DEBUG=true for stack trace\n');
+    console.error('  Run with CORTEX_DEBUG=true for stack trace\n');
   }
 
   process.exit(1);
@@ -123,7 +123,7 @@ process.on('uncaughtException', (error) => {
 const program = new Command();
 
 program
-  .name('sparn')
+  .name('cortex')
   .description('Context optimization for AI coding agents')
   .version(VERSION, '-v, --version', 'Output the current version')
   .helpOption('-h, --help', 'Display help for command')
@@ -151,21 +151,21 @@ process.once('SIGINT', () => {
 // Init command
 program
   .command('init')
-  .description('Initialize Sparn in the current project')
-  .option('-f, --force', 'Force overwrite if .sparn/ already exists')
+  .description('Initialize Cortex in the current project')
+  .option('-f, --force', 'Force overwrite if .cortex/ already exists')
   .addHelpText(
     'after',
     `
 Examples:
-  $ sparn init                  # Initialize in current directory
-  $ sparn init --force          # Overwrite existing .sparn/ directory
+  $ cortex init                  # Initialize in current directory
+  $ cortex init --force          # Overwrite existing .cortex/ directory
 
 Files Created:
-  .sparn/config.yaml            # Configuration with optimization parameters
-  .sparn/memory.db              # SQLite database for context storage
+  .cortex/config.yaml            # Configuration with optimization parameters
+  .cortex/memory.db              # SQLite database for context storage
 
 Next Steps:
-  After initialization, use 'sparn optimize' to start optimizing context.
+  After initialization, use 'cortex optimize' to start optimizing context.
 `,
   )
   .action(async (options) => {
@@ -174,12 +174,12 @@ Next Steps:
     const { createInitSpinner } = await import('./ui/progress.js');
     const { neuralCyan, errorRed } = await import('./ui/colors.js');
 
-    const spinner = createInitSpinner('🧠 Initializing Sparn...');
+    const spinner = createInitSpinner('🧠 Initializing Cortex...');
     try {
       spinner.start();
-      spinner.text = '📁 Creating .sparn/ directory...';
+      spinner.text = '📁 Creating .cortex/ directory...';
       const result = await initCommand({ force: options.force });
-      spinner.succeed(neuralCyan('Sparn initialized successfully!'));
+      spinner.succeed(neuralCyan('Cortex initialized successfully!'));
       displayInitSuccess(result);
     } catch (error) {
       spinner.fail(errorRed('Initialization failed'));
@@ -200,10 +200,10 @@ program
     'after',
     `
 Examples:
-  $ sparn optimize -i context.txt -o optimized.txt    # Optimize file
-  $ cat context.txt | sparn optimize                  # Optimize from stdin
-  $ sparn optimize -i context.txt --dry-run           # Preview without saving
-  $ sparn optimize -i context.txt --verbose           # Show entry scores
+  $ cortex optimize -i context.txt -o optimized.txt    # Optimize file
+  $ cat context.txt | cortex optimize                  # Optimize from stdin
+  $ cortex optimize -i context.txt --dry-run           # Preview without saving
+  $ cortex optimize -i context.txt --verbose           # Show entry scores
 
 How It Works:
   1. Relevance Filtering: Keeps only 2-5% most relevant context
@@ -244,7 +244,7 @@ Typical Results:
 
       // Load memory
       spinner.text = '💾 Loading memory database...';
-      const dbPath = resolve(process.cwd(), '.sparn/memory.db');
+      const dbPath = resolve(process.cwd(), '.cortex/memory.db');
       const memory = await createKVMemory(dbPath);
 
       try {
@@ -308,10 +308,10 @@ program
     'after',
     `
 Examples:
-  $ sparn stats                 # View summary statistics
-  $ sparn stats --graph         # Show ASCII chart of optimization history
-  $ sparn stats --json          # Output as JSON for automation
-  $ sparn stats --reset         # Clear all statistics (with confirmation)
+  $ cortex stats                 # View summary statistics
+  $ cortex stats --graph         # Show ASCII chart of optimization history
+  $ cortex stats --json          # Output as JSON for automation
+  $ cortex stats --reset         # Clear all statistics (with confirmation)
 
 Tracked Metrics:
   • Total optimizations performed
@@ -334,7 +334,7 @@ Tracked Metrics:
 
       // Load memory
       if (spinner) spinner.text = '💾 Loading optimization history...';
-      const dbPath = resolve(process.cwd(), '.sparn/memory.db');
+      const dbPath = resolve(process.cwd(), '.cortex/memory.db');
       const memory = await createKVMemory(dbPath);
 
       // Handle reset with confirmation
@@ -396,10 +396,10 @@ program
     'after',
     `
 Examples:
-  $ sparn relay git log         # Run 'git log' and optimize output
-  $ sparn relay npm test        # Run 'npm test' and optimize output
-  $ sparn relay gh pr view 123  # Optimize GitHub CLI output
-  $ sparn relay ls -la --silent # Suppress optimization summary
+  $ cortex relay git log         # Run 'git log' and optimize output
+  $ cortex relay npm test        # Run 'npm test' and optimize output
+  $ cortex relay gh pr view 123  # Optimize GitHub CLI output
+  $ cortex relay ls -la --silent # Suppress optimization summary
 
 Use Cases:
   • Wrap verbose CLI commands (git log, gh pr view)
@@ -418,7 +418,7 @@ The relay command passes the exit code from the wrapped command.
 
     try {
       // Load memory
-      const dbPath = resolve(process.cwd(), '.sparn/memory.db');
+      const dbPath = resolve(process.cwd(), '.cortex/memory.db');
       const memory = await createKVMemory(dbPath);
 
       let exitCode = 1;
@@ -460,7 +460,7 @@ program
     'after',
     `
 Examples:
-  $ sparn consolidate           # Run memory consolidation
+  $ cortex consolidate           # Run memory consolidation
 
 What It Does:
   1. Remove Decayed Entries: Deletes entries that have fully decayed
@@ -493,7 +493,7 @@ Typical Results:
 
       // Load memory
       spinner.text = '💾 Loading memory database...';
-      const dbPath = resolve(process.cwd(), '.sparn/memory.db');
+      const dbPath = resolve(process.cwd(), '.cortex/memory.db');
       const memory = await createKVMemory(dbPath);
 
       try {
@@ -537,10 +537,10 @@ program
     'after',
     `
 Examples:
-  $ sparn config                        # Open config in $EDITOR
-  $ sparn config get pruning.threshold  # Get specific value
-  $ sparn config set pruning.threshold 3 # Set value
-  $ sparn config --json                 # View full config as JSON
+  $ cortex config                        # Open config in $EDITOR
+  $ cortex config get pruning.threshold  # Get specific value
+  $ cortex config set pruning.threshold 3 # Set value
+  $ cortex config --json                 # View full config as JSON
 
 Configuration Keys:
   pruning.threshold                     # Relevance threshold (2-5%)
@@ -551,7 +551,7 @@ Configuration Keys:
   embedding.model                       # BTSP embedding model
   embedding.dimensions                  # Embedding vector size
 
-The config file is located at .sparn/config.yaml
+The config file is located at .cortex/config.yaml
 `,
   )
   .action(async (subcommand, key, value, options) => {
@@ -560,7 +560,7 @@ The config file is located at .sparn/config.yaml
     const { neuralCyan, errorRed } = await import('./ui/colors.js');
 
     try {
-      const configPath = resolve(process.cwd(), '.sparn/config.yaml');
+      const configPath = resolve(process.cwd(), '.cortex/config.yaml');
 
       // Execute config command
       const result = await configCommand({
@@ -625,9 +625,9 @@ Subcommands:
   status                                # Check daemon status
 
 Examples:
-  $ sparn daemon start                  # Start watching Claude Code sessions
-  $ sparn daemon stop                   # Stop daemon
-  $ sparn daemon status                 # Check if daemon is running
+  $ cortex daemon start                  # Start watching Claude Code sessions
+  $ cortex daemon stop                   # Stop daemon
+  $ cortex daemon status                 # Check if daemon is running
 
 The daemon watches ~/.claude/projects/**/*.jsonl and automatically
 optimizes contexts when they exceed the configured threshold.
@@ -641,7 +641,7 @@ optimizes contexts when they exceed the configured threshold.
 
     try {
       // Load config
-      const configPath = resolve(process.cwd(), '.sparn/config.yaml');
+      const configPath = resolve(process.cwd(), '.cortex/config.yaml');
       const configYAML = readFileSync(configPath, 'utf-8');
       // biome-ignore lint/suspicious/noExplicitAny: parseYAML returns unknown, need to cast
       const config = parseYAML(configYAML) as any;
@@ -713,10 +713,10 @@ Subcommands:
   status                                # Check hook status
 
 Examples:
-  $ sparn hooks install                 # Install hooks for current project
-  $ sparn hooks install --global        # Install hooks globally
-  $ sparn hooks uninstall               # Uninstall hooks
-  $ sparn hooks status                  # Check if hooks are active
+  $ cortex hooks install                 # Install hooks for current project
+  $ cortex hooks install --global        # Install hooks globally
+  $ cortex hooks uninstall               # Uninstall hooks
+  $ cortex hooks status                  # Check if hooks are active
 
 Hooks automatically optimize context before each Claude Code prompt
 and compress verbose tool results after execution.
@@ -767,8 +767,8 @@ program
     'after',
     `
 Examples:
-  $ sparn interactive                   # Launch interactive mode
-  $ sparn i                             # Short alias
+  $ cortex interactive                   # Launch interactive mode
+  $ cortex i                             # Short alias
 
 Features:
   • 📝 Configuration Wizard - Guided prompts for all settings
@@ -778,7 +778,7 @@ Features:
   • 🚀 Quick Actions - Common tasks and shortcuts
 
 The interactive mode provides a conversational interface for exploring
-and configuring Sparn without memorizing CLI flags.
+and configuring Cortex without memorizing CLI flags.
 `,
   )
   .action(async () => {
@@ -789,12 +789,12 @@ and configuring Sparn without memorizing CLI flags.
 
     try {
       // Load memory
-      const dbPath = resolve(process.cwd(), '.sparn/memory.db');
+      const dbPath = resolve(process.cwd(), '.cortex/memory.db');
       const memory = await createKVMemory(dbPath);
 
       try {
         // Config path
-        const configPath = resolve(process.cwd(), '.sparn/config.yaml');
+        const configPath = resolve(process.cwd(), '.cortex/config.yaml');
 
         // Run interactive mode
         await interactiveCommand({
@@ -1114,7 +1114,7 @@ program
   )
   .action(async (options) => {
     const { renderDashboard } = await import('./dashboard/app.js');
-    const dbPath = resolve(process.cwd(), '.sparn/memory.db');
+    const dbPath = resolve(process.cwd(), '.cortex/memory.db');
     const projectRoot = process.cwd();
     renderDashboard({
       dbPath,
@@ -1130,25 +1130,25 @@ program
   .action(async () => {
     const { neuralCyan, synapseViolet } = await import('./ui/colors.js');
 
-    console.log(neuralCyan(`\n🧠 Sparn v${VERSION} Status\n`));
+    console.log(neuralCyan(`\n🧠 Cortex v${VERSION} Status\n`));
 
-    // Check .sparn init
+    // Check .cortex init
     const { existsSync: exists } = await import('node:fs');
-    const sparnDir = resolve(process.cwd(), '.sparn');
-    const initialized = exists(sparnDir);
-    console.log(`  Initialized: ${initialized ? '✓' : '✗ (run sparn init)'}`);
+    const cortexDir = resolve(process.cwd(), '.cortex');
+    const initialized = exists(cortexDir);
+    console.log(`  Initialized: ${initialized ? '✓' : '✗ (run cortex init)'}`);
 
     if (initialized) {
       // Check database
-      const dbPath = resolve(sparnDir, 'memory.db');
+      const dbPath = resolve(cortexDir, 'memory.db');
       console.log(`  Database: ${exists(dbPath) ? '✓' : '✗'}`);
 
       // Check search index
-      const searchDb = resolve(sparnDir, 'search.db');
-      console.log(`  Search index: ${exists(searchDb) ? '✓' : '✗ (run sparn search init)'}`);
+      const searchDb = resolve(cortexDir, 'search.db');
+      console.log(`  Search index: ${exists(searchDb) ? '✓' : '✗ (run cortex search init)'}`);
 
       // Check plans
-      const plansDir = resolve(sparnDir, 'plans');
+      const plansDir = resolve(cortexDir, 'plans');
       if (exists(plansDir)) {
         const { readdirSync: readDir } = await import('node:fs');
         const plans = readDir(plansDir).filter((f: string) => f.endsWith('.json'));
@@ -1156,7 +1156,7 @@ program
       }
 
       // Check daemon
-      const pidFile = resolve(sparnDir, 'daemon.pid');
+      const pidFile = resolve(cortexDir, 'daemon.pid');
       console.log(`  Daemon: ${exists(pidFile) ? '✓ running' : '✗ stopped'}`);
     }
 

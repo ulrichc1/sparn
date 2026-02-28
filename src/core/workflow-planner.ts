@@ -13,7 +13,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-export interface SparnPlan {
+export interface CortexPlan {
   id: string;
   created_at: number;
   task_description: string;
@@ -70,10 +70,10 @@ export interface WorkflowPlanner {
     searchQueries: string[],
     steps: Omit<PlanStep, 'status' | 'result'>[],
     tokenBudget?: { planning: number; estimated_execution: number; max_file_reads: number },
-  ): Promise<SparnPlan>;
+  ): Promise<CortexPlan>;
 
   /** Load an existing plan */
-  loadPlan(planId: string): Promise<SparnPlan | null>;
+  loadPlan(planId: string): Promise<CortexPlan | null>;
 
   /** List all plans */
   listPlans(): Promise<Array<{ id: string; task: string; status: string; created: number }>>;
@@ -100,7 +100,7 @@ export interface WorkflowPlanner {
  * Create a workflow planner
  */
 export function createWorkflowPlanner(projectRoot: string): WorkflowPlanner {
-  const plansDir = join(projectRoot, '.sparn', 'plans');
+  const plansDir = join(projectRoot, '.cortex', 'plans');
 
   // Ensure plans directory exists
   if (!existsSync(plansDir)) {
@@ -124,10 +124,10 @@ export function createWorkflowPlanner(projectRoot: string): WorkflowPlanner {
     searchQueries: string[],
     steps: Omit<PlanStep, 'status' | 'result'>[],
     tokenBudget = { planning: 0, estimated_execution: 0, max_file_reads: 5 },
-  ): Promise<SparnPlan> {
+  ): Promise<CortexPlan> {
     const id = randomUUID().split('-')[0] || 'plan';
 
-    const plan: SparnPlan = {
+    const plan: CortexPlan = {
       id,
       created_at: Date.now(),
       task_description: taskDescription,
@@ -142,12 +142,12 @@ export function createWorkflowPlanner(projectRoot: string): WorkflowPlanner {
     return plan;
   }
 
-  async function loadPlan(planId: string): Promise<SparnPlan | null> {
+  async function loadPlan(planId: string): Promise<CortexPlan | null> {
     const path = planPath(planId);
     if (!existsSync(path)) return null;
 
     try {
-      return JSON.parse(readFileSync(path, 'utf-8')) as SparnPlan;
+      return JSON.parse(readFileSync(path, 'utf-8')) as CortexPlan;
     } catch {
       return null;
     }
@@ -164,7 +164,7 @@ export function createWorkflowPlanner(projectRoot: string): WorkflowPlanner {
 
     for (const file of files) {
       try {
-        const plan = JSON.parse(readFileSync(join(plansDir, file), 'utf-8')) as SparnPlan;
+        const plan = JSON.parse(readFileSync(join(plansDir, file), 'utf-8')) as CortexPlan;
         plans.push({
           id: plan.id,
           task: plan.task_description,

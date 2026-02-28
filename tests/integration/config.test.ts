@@ -9,18 +9,18 @@ import { configCommand } from '../../src/cli/commands/config.js';
 
 describe('Config Command Integration Tests', () => {
   const testDir = join(process.cwd(), '.test-config-integration');
-  const sparnDir = join(testDir, '.sparn');
-  const configPath = join(sparnDir, 'config.yaml');
+  const cortexDir = join(testDir, '.cortex');
+  const configPath = join(cortexDir, 'config.yaml');
 
   beforeEach(() => {
     // Create test directory structure
     if (existsSync(testDir)) {
       rmSync(testDir, { recursive: true, force: true });
     }
-    mkdirSync(sparnDir, { recursive: true });
+    mkdirSync(cortexDir, { recursive: true });
 
     // Write default config
-    const defaultConfig = `# Sparn Configuration (v1.0)
+    const defaultConfig = `# Cortex Configuration (v1.0)
 agent: claude-code
 
 pruning:
@@ -53,7 +53,7 @@ autoConsolidate: null
     }
   });
 
-  // T143: Integration test: `sparn config get pruning.threshold` returns value
+  // T143: Integration test: `cortex config get pruning.threshold` returns value
   it('T143: should get config value by key', async () => {
     const result = await configCommand({
       configPath,
@@ -66,7 +66,7 @@ autoConsolidate: null
     expect(result.message).toContain('5');
   });
 
-  // T144: Integration test: `sparn config set pruning.threshold 10` updates config.yaml
+  // T144: Integration test: `cortex config set pruning.threshold 10` updates config.yaml
   it('T144: should set config value and update YAML', async () => {
     const result = await configCommand({
       configPath,
@@ -84,7 +84,7 @@ autoConsolidate: null
     expect(updatedConfig).toContain('threshold: 10');
   });
 
-  // T145: Integration test: `sparn config set` rejects invalid values with helpful error
+  // T145: Integration test: `cortex config set` rejects invalid values with helpful error
   it('T145: should reject invalid threshold value', async () => {
     const result = await configCommand({
       configPath,
@@ -122,7 +122,7 @@ autoConsolidate: null
     expect(result.error).toContain('invalid.key');
   });
 
-  // T146: Integration test: `sparn config` opens editor with YAML file
+  // T146: Integration test: `cortex config` opens editor with YAML file
   it('T146: should return editor path when no subcommand', async () => {
     const result = await configCommand({
       configPath,
@@ -132,7 +132,7 @@ autoConsolidate: null
     expect(result.editorPath).toBe(configPath);
   });
 
-  // T147: Integration test: `sparn config --json` outputs JSON format
+  // T147: Integration test: `cortex config --json` outputs JSON format
   it('T147: should output JSON format when flag set', async () => {
     const result = await configCommand({
       configPath,

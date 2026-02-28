@@ -1,6 +1,6 @@
 /**
  * Init command implementation.
- * Creates .sparn/ directory with config and database.
+ * Creates .cortex/ directory with config and database.
  */
 
 import { readFileSync } from 'node:fs';
@@ -13,16 +13,16 @@ import { DEFAULT_CONFIG } from '../../types/config.js';
 import { getBanner } from '../ui/banner.js';
 import { brainPink, dim, neuralCyan } from '../ui/colors.js';
 
-// Get sparn's own version from its package.json
+// Get cortex's own version from its package.json
 function getVersion(): string {
   try {
-    // Read from sparn's own package.json (relative to compiled module)
+    // Read from cortex's own package.json (relative to compiled module)
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
     const pkg = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf-8'));
     return pkg.version;
   } catch {
-    return '1.4.0';
+    return '1.0.0';
   }
 }
 
@@ -32,7 +32,7 @@ const VERSION = getVersion();
  * Options for init command.
  */
 export interface InitOptions {
-  /** Force overwrite if .sparn/ exists */
+  /** Force overwrite if .cortex/ exists */
   force?: boolean;
   /** Current working directory */
   cwd?: string;
@@ -55,7 +55,7 @@ export interface InitResult {
 /**
  * Execute init command.
  *
- * Creates .sparn/ directory with:
+ * Creates .cortex/ directory with:
  * - config.yaml (default configuration)
  * - memory.db (SQLite database)
  *
@@ -65,21 +65,21 @@ export interface InitResult {
 export async function initCommand(options: InitOptions = {}): Promise<InitResult> {
   const startTime = Date.now();
   const cwd = options.cwd || process.cwd();
-  const sparnDir = join(cwd, '.sparn');
-  const configPath = join(sparnDir, 'config.yaml');
-  const dbPath = join(sparnDir, 'memory.db');
+  const cortexDir = join(cwd, '.cortex');
+  const configPath = join(cortexDir, 'config.yaml');
+  const dbPath = join(cortexDir, 'memory.db');
 
-  // Check if .sparn/ already exists
-  const exists = await checkExists(sparnDir);
+  // Check if .cortex/ already exists
+  const exists = await checkExists(cortexDir);
 
   if (exists && !options.force) {
     throw new Error(
-      '.sparn/ directory already exists. Use --force to overwrite or run from a different directory.',
+      '.cortex/ directory already exists. Use --force to overwrite or run from a different directory.',
     );
   }
 
-  // Create .sparn/ directory
-  await mkdir(sparnDir, { recursive: true });
+  // Create .cortex/ directory
+  await mkdir(cortexDir, { recursive: true });
 
   // Create config.yaml with defaults
   const configYAML = dumpYAML(DEFAULT_CONFIG, {
@@ -87,8 +87,8 @@ export async function initCommand(options: InitOptions = {}): Promise<InitResult
     lineWidth: 100,
   });
 
-  const configWithComments = `# Sparn Configuration
-# See https://github.com/ulrichc1/sparn for documentation
+  const configWithComments = `# Cortex Configuration
+# See https://github.com/sparn-labs/cortex for documentation
 
 ${configYAML}`;
 
@@ -116,7 +116,7 @@ export function displayInitSuccess(result: InitResult): void {
   console.log(getBanner(VERSION));
 
   console.log(`\n${brainPink('━'.repeat(60))}`);
-  console.log(brainPink('  🧠 Sparn Initialized Successfully!'));
+  console.log(brainPink('  🧠 Cortex Initialized Successfully!'));
   console.log(brainPink('━'.repeat(60)));
 
   console.log(`\n  ${neuralCyan('Config:')}   ${dim(result.configPath)}`);
@@ -124,7 +124,7 @@ export function displayInitSuccess(result: InitResult): void {
   console.log(`  ${neuralCyan('Time:')}     ${dim(`${result.durationMs}ms`)}`);
 
   console.log(
-    `\n  ${brainPink('→')} Run ${neuralCyan("'sparn optimize'")} to start optimizing context!`,
+    `\n  ${brainPink('→')} Run ${neuralCyan("'cortex optimize'")} to start optimizing context!`,
   );
   console.log(`${brainPink('━'.repeat(60))}\n`);
 }

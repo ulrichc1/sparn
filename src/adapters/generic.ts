@@ -11,7 +11,7 @@ import { createEngramScorer } from '../core/engram-scorer.js';
 import type { KVMemory } from '../core/kv-memory.js';
 import { createSparsePruner } from '../core/sparse-pruner.js';
 import type { AgentAdapter, OptimizationResult, OptimizeOptions } from '../types/adapter.js';
-import type { SparnConfig } from '../types/config.js';
+import type { CortexConfig } from '../types/config.js';
 import type { MemoryEntry } from '../types/memory.js';
 import { hashContent } from '../utils/hash.js';
 import { estimateTokens } from '../utils/tokenizer.js';
@@ -19,10 +19,10 @@ import { estimateTokens } from '../utils/tokenizer.js';
 /**
  * Create a generic adapter instance
  * @param memory - KV memory store
- * @param config - Sparn configuration
+ * @param config - Cortex configuration
  * @returns AgentAdapter instance
  */
-export function createGenericAdapter(memory: KVMemory, config: SparnConfig): AgentAdapter {
+export function createGenericAdapter(memory: KVMemory, config: CortexConfig): AgentAdapter {
   const pruner = createSparsePruner(config.pruning);
   const scorer = createEngramScorer(config.decay);
   const states = createConfidenceStates(config.states);

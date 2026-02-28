@@ -12,7 +12,7 @@ import { appendFileSync } from 'node:fs';
 import { consolidateCommand } from '../cli/commands/consolidate.js';
 import type { KVMemory } from '../core/kv-memory.js';
 import { getMetrics } from '../core/metrics.js';
-import type { SparnConfig } from '../types/config.js';
+import type { CortexConfig } from '../types/config.js';
 
 export interface ConsolidationScheduler {
   /**
@@ -70,8 +70,8 @@ export interface ConsolidationResult {
 export interface ConsolidationSchedulerOptions {
   /** Memory store instance */
   memory: KVMemory;
-  /** Sparn configuration */
-  config: SparnConfig;
+  /** Cortex configuration */
+  config: CortexConfig;
   /** Log file path (optional, defaults to daemon log) */
   logFile?: string;
 }

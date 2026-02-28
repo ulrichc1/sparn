@@ -1,10 +1,10 @@
-# Sparn
+# Cortex
 
 Context optimization for AI coding agents. Reduces token usage by 60-90% so your Claude Code sessions last longer and cost less.
 
 ## Why
 
-Long Claude Code sessions burn through context windows fast. Tool outputs, file reads, and conversation history pile up until you hit the limit and lose your thread. Sparn watches for this and keeps your context lean:
+Long Claude Code sessions burn through context windows fast. Tool outputs, file reads, and conversation history pile up until you hit the limit and lose your thread. Cortex watches for this and keeps your context lean:
 
 - Compresses verbose tool outputs (test results, build logs, file reads)
 - Tracks which context is still relevant and which has gone stale
@@ -14,7 +14,7 @@ Long Claude Code sessions burn through context windows fast. Tool outputs, file 
 ## Install
 
 ```bash
-npm install -g @ulrichc1/sparn
+npm install -g @sparn/cortex
 ```
 
 ## Setup with Claude Code
@@ -22,35 +22,35 @@ npm install -g @ulrichc1/sparn
 The fastest way to get value is to install the Claude Code hooks. These run automatically in the background - no workflow changes needed.
 
 ```bash
-# Initialize sparn in your project
+# Initialize cortex in your project
 cd your-project
-sparn init
+cortex init
 
 # Install hooks into Claude Code
-sparn hooks install
+cortex hooks install
 
 # Or install globally (all projects)
-sparn hooks install --global
+cortex hooks install --global
 ```
 
-That's it. Sparn now:
+That's it. Cortex now:
 - Summarizes large tool outputs after Bash, Read, Grep, and Glob calls
 - Warns Claude when your session transcript is getting large
 
 To check status or remove:
 ```bash
-sparn hooks status
-sparn hooks uninstall
+cortex hooks status
+cortex hooks uninstall
 ```
 
 ## Daily Usage
 
 ### Optimize context manually
 
-Pipe any text through sparn to compress it:
+Pipe any text through cortex to compress it:
 
 ```bash
-cat large-context.txt | sparn optimize
+cat large-context.txt | cortex optimize
 ```
 
 ### Relay commands
@@ -58,15 +58,15 @@ cat large-context.txt | sparn optimize
 Wrap any CLI command to automatically optimize its output:
 
 ```bash
-sparn relay git log --oneline -50
-sparn relay npm test
-sparn relay cargo build --verbose
+cortex relay git log --oneline -50
+cortex relay npm test
+cortex relay cargo build --verbose
 ```
 
 ### Check your savings
 
 ```bash
-sparn stats
+cortex stats
 ```
 
 ### Background daemon
@@ -74,14 +74,14 @@ sparn stats
 For always-on optimization, start the daemon. It watches your session files and optimizes automatically when context exceeds the configured threshold.
 
 ```bash
-sparn daemon start
-sparn daemon status
-sparn daemon stop
+cortex daemon start
+cortex daemon status
+cortex daemon stop
 ```
 
 ## Codebase Intelligence (v1.4)
 
-Sparn can analyze your project structure to provide smarter context to Claude Code.
+Cortex can analyze your project structure to provide smarter context to Claude Code.
 
 ### Dependency graph
 
@@ -89,13 +89,13 @@ Map your project's import/export relationships:
 
 ```bash
 # Full analysis: entry points, hot paths, orphaned files
-sparn graph --analyze
+cortex graph --analyze
 
 # Focus on files related to "auth"
-sparn graph --focus auth
+cortex graph --focus auth
 
 # Trace dependencies from an entry point
-sparn graph --entry src/index.ts
+cortex graph --entry src/index.ts
 ```
 
 ### Search
@@ -104,13 +104,13 @@ Full-text search across your codebase using FTS5 (SQLite) with ripgrep fallback:
 
 ```bash
 # First time: initialize and index
-sparn search init
+cortex search init
 
 # Search
-sparn search validateToken
+cortex search validateToken
 
 # Re-index after changes
-sparn search refresh
+cortex search refresh
 ```
 
 ### Generate CLAUDE.md
@@ -118,13 +118,13 @@ sparn search refresh
 Auto-generate a `CLAUDE.md` file from your project structure, dependencies, and scripts:
 
 ```bash
-sparn docs
+cortex docs
 
 # Skip dependency graph analysis
-sparn docs --no-graph
+cortex docs --no-graph
 
 # Custom output path
-sparn docs -o docs/CLAUDE.md
+cortex docs -o docs/CLAUDE.md
 ```
 
 ### Workflow planner
@@ -133,19 +133,19 @@ Create and track implementation plans with token budgets:
 
 ```bash
 # Create a plan
-sparn plan "Add user authentication" --files src/auth.ts src/routes.ts
+cortex plan "Add user authentication" --files src/auth.ts src/routes.ts
 
 # Create with search context
-sparn plan "Fix login bug" --searches "login handler" "auth middleware"
+cortex plan "Fix login bug" --searches "login handler" "auth middleware"
 
 # List existing plans
-sparn plan list
+cortex plan list
 
 # Execute a plan
-sparn exec <plan-id>
+cortex exec <plan-id>
 
 # Verify completion
-sparn verify <plan-id>
+cortex verify <plan-id>
 ```
 
 ### Technical debt tracker
@@ -154,27 +154,27 @@ Track technical debt with severity levels and repayment dates:
 
 ```bash
 # Add debt
-sparn debt add "Refactor auth middleware" --severity P1 --tokens 5000
+cortex debt add "Refactor auth middleware" --severity P1 --tokens 5000
 
 # Add with due date and affected files
-sparn debt add "Fix N+1 queries" --severity P0 --due 2026-03-01 --files src/db.ts
+cortex debt add "Fix N+1 queries" --severity P0 --due 2026-03-01 --files src/db.ts
 
 # List all debt
-sparn debt list
+cortex debt list
 
 # List overdue items
-sparn debt list --overdue
+cortex debt list --overdue
 
 # Mark as resolved
-sparn debt resolve <id>
+cortex debt resolve <id>
 
 # View stats
-sparn debt stats
+cortex debt stats
 ```
 
 ## Configuration
 
-After `sparn init`, edit `.sparn/config.yaml`:
+After `cortex init`, edit `.cortex/config.yaml`:
 
 ```yaml
 pruning:
@@ -199,19 +199,19 @@ agent: generic  # or claude-code
 
 Or use the CLI:
 ```bash
-sparn config get pruning.threshold
-sparn config set pruning.threshold 10
+cortex config get pruning.threshold
+cortex config set pruning.threshold 10
 ```
 
 Or the interactive mode:
 ```bash
-sparn interactive
+cortex interactive
 ```
 
 ## Programmatic API
 
 ```typescript
-import { createSparsePruner, estimateTokens } from '@ulrichc1/sparn';
+import { createSparsePruner, estimateTokens } from '@sparn/cortex';
 
 const pruner = createSparsePruner({ threshold: 5 });
 const result = pruner.prune(largeContext, 5);
@@ -223,17 +223,17 @@ The full API exports all core modules: `createDependencyGraph`, `createSearchEng
 
 ## MCP Server
 
-Sparn can run as an MCP server for Claude Desktop or any MCP client:
+Cortex can run as an MCP server for Claude Desktop or any MCP client:
 
 ```bash
-sparn mcp:server
+cortex mcp:server
 ```
 
-Exposes three tools: `sparn_optimize`, `sparn_stats`, `sparn_consolidate`.
+Exposes three tools: `cortex_optimize`, `cortex_stats`, `cortex_consolidate`.
 
 ## How it works
 
-Sparn uses a multi-stage pipeline to decide what context to keep:
+Cortex uses a multi-stage pipeline to decide what context to keep:
 
 - **Relevance filtering** - Only the most relevant 2-5% of context carries the signal
 - **Time-based decay** - Older context fades over time unless reinforced by reuse
@@ -244,8 +244,8 @@ Sparn uses a multi-stage pipeline to decide what context to keep:
 ## Development
 
 ```bash
-git clone https://github.com/ulrichc1/sparn.git
-cd sparn
+git clone https://github.com/sparn-labs/cortex.git
+cd cortex
 npm install
 npm run build
 npm test          # 479 tests

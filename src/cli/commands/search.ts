@@ -23,7 +23,7 @@ export interface SearchCommandResult {
 
 export async function searchCommand(options: SearchCommandOptions): Promise<SearchCommandResult> {
   const projectRoot = resolve(process.cwd());
-  const dbPath = resolve(projectRoot, '.sparn', 'search.db');
+  const dbPath = resolve(projectRoot, '.cortex', 'search.db');
   const engine = createSearchEngine(dbPath);
 
   try {
@@ -46,7 +46,7 @@ export async function searchCommand(options: SearchCommandOptions): Promise<Sear
     }
 
     if (!options.query) {
-      return { message: 'No search query provided. Usage: sparn search "query"' };
+      return { message: 'No search query provided. Usage: cortex search "query"' };
     }
 
     const results = await engine.search(options.query, {

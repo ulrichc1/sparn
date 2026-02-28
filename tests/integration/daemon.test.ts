@@ -14,7 +14,7 @@ describe('Daemon Integration', () => {
   let testConfig: typeof DEFAULT_CONFIG;
 
   beforeEach(() => {
-    testDir = join(tmpdir(), `sparn-daemon-test-${Date.now()}`);
+    testDir = join(tmpdir(), `cortex-daemon-test-${Date.now()}`);
     mkdirSync(testDir, { recursive: true });
 
     testConfig = {

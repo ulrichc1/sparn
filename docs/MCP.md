@@ -1,13 +1,13 @@
-# Sparn MCP Server Configuration Guide
+# Cortex MCP Server Configuration Guide
 
-Sparn exposes its neuroscience-inspired context optimization as an MCP (Model Context Protocol) server, enabling integration with Claude Desktop, VS Code, Cursor, and other MCP-compatible clients.
+Cortex exposes its neuroscience-inspired context optimization as an MCP (Model Context Protocol) server, enabling integration with Claude Desktop, VS Code, Cursor, and other MCP-compatible clients.
 
 ## Quick Start
 
-### 1. Install Sparn
+### 1. Install Cortex
 
 ```bash
-npm install -g @ulrichc1/sparn
+npm install -g @sparn/cortex
 ```
 
 ### 2. Configure Your MCP Client
@@ -22,11 +22,11 @@ Add to `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "sparn": {
+    "cortex": {
       "command": "node",
-      "args": ["/path/to/sparn/dist/mcp/index.js"],
+      "args": ["/path/to/cortex/dist/mcp/index.js"],
       "env": {
-        "SPARN_DB_PATH": "/path/to/.sparn/memory.db"
+        "CORTEX_DB_PATH": "/path/to/.cortex/memory.db"
       }
     }
   }
@@ -38,9 +38,9 @@ If installed globally via npm:
 ```json
 {
   "mcpServers": {
-    "sparn": {
+    "cortex": {
       "command": "npx",
-      "args": ["@ulrichc1/sparn-mcp"]
+      "args": ["@sparn/cortex-mcp"]
     }
   }
 }
@@ -53,9 +53,9 @@ Add to your workspace `.vscode/mcp.json`:
 ```json
 {
   "servers": {
-    "sparn": {
+    "cortex": {
       "command": "node",
-      "args": ["./node_modules/@ulrichc1/sparn/dist/mcp/index.js"]
+      "args": ["./node_modules/@sparn/cortex/dist/mcp/index.js"]
     }
   }
 }
@@ -75,11 +75,11 @@ node dist/mcp/index.js
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SPARN_DB_PATH` | `.sparn/memory.db` | Path to the SQLite database file |
+| `CORTEX_DB_PATH` | `.cortex/memory.db` | Path to the SQLite database file |
 
 ## Available Tools
 
-### sparn_optimize
+### cortex_optimize
 
 Optimize context using the neuroscience-inspired pipeline (BTSP detection, engram scoring, confidence states, sparse pruning).
 
@@ -111,7 +111,7 @@ Optimize context using the neuroscience-inspired pipeline (BTSP detection, engra
 }
 ```
 
-### sparn_stats
+### cortex_stats
 
 Get optimization statistics from the memory store.
 
@@ -141,7 +141,7 @@ Get optimization statistics from the memory store.
 }
 ```
 
-### sparn_consolidate
+### cortex_consolidate
 
 Run memory consolidation (sleep replay). Removes decayed entries and merges duplicates.
 
@@ -166,12 +166,12 @@ Run memory consolidation (sleep replay). Removes decayed entries and merges dupl
 You can also create the MCP server programmatically:
 
 ```typescript
-import { createKVMemory } from '@ulrichc1/sparn';
-import { createSparnMcpServer } from '@ulrichc1/sparn';
+import { createKVMemory } from '@sparn/cortex';
+import { createCortexMcpServer } from '@sparn/cortex';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
-const memory = await createKVMemory('./my-project/.sparn/memory.db');
-const server = createSparnMcpServer({ memory });
+const memory = await createKVMemory('./my-project/.cortex/memory.db');
+const server = createCortexMcpServer({ memory });
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
@@ -179,20 +179,20 @@ await server.connect(transport);
 
 ## Architecture
 
-The MCP server acts as a bridge between MCP clients and Sparn's core optimization engine:
+The MCP server acts as a bridge between MCP clients and Cortex's core optimization engine:
 
 ```
 MCP Client (Claude Desktop, VS Code, etc.)
     |
     | JSON-RPC over stdio
     |
-Sparn MCP Server (src/mcp/server.ts)
+Cortex MCP Server (src/mcp/server.ts)
     |
-    |-- sparn_optimize  --> GenericAdapter --> Optimization Pipeline
-    |-- sparn_stats     --> KVMemory --> optimization_stats table
-    |-- sparn_consolidate --> SleepCompressor --> KVMemory
+    |-- cortex_optimize  --> GenericAdapter --> Optimization Pipeline
+    |-- cortex_stats     --> KVMemory --> optimization_stats table
+    |-- cortex_consolidate --> SleepCompressor --> KVMemory
     |
-SQLite Database (.sparn/memory.db)
+SQLite Database (.cortex/memory.db)
 ```
 
 ## Troubleshooting
@@ -207,8 +207,8 @@ SQLite Database (.sparn/memory.db)
 
 The MCP server logs to stderr. For Claude Desktop, check:
 
-- **macOS:** `~/Library/Logs/Claude/mcp-server-sparn.log`
-- **Windows:** `%LOCALAPPDATA%\Claude\Logs\mcp-server-sparn.log`
+- **macOS:** `~/Library/Logs/Claude/mcp-server-cortex.log`
+- **Windows:** `%LOCALAPPDATA%\Claude\Logs\mcp-server-cortex.log`
 
 ### Database issues
 
@@ -216,6 +216,6 @@ If you encounter database errors, try:
 
 ```bash
 # Remove and recreate the database
-rm .sparn/memory.db
+rm .cortex/memory.db
 node dist/mcp/index.js
 ```

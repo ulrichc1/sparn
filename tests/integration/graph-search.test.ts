@@ -10,11 +10,11 @@ import { createSearchEngine } from '../../src/core/search-engine.js';
 
 describe('Graph + Search Integration', () => {
   const tmpDir = join(process.cwd(), '.test-graph-search-tmp');
-  const searchDbPath = join(tmpDir, '.sparn', 'search.db');
+  const searchDbPath = join(tmpDir, '.cortex', 'search.db');
 
   beforeEach(() => {
     rmSync(tmpDir, { recursive: true, force: true });
-    mkdirSync(join(tmpDir, '.sparn'), { recursive: true });
+    mkdirSync(join(tmpDir, '.cortex'), { recursive: true });
     mkdirSync(join(tmpDir, 'src', 'core'), { recursive: true });
     mkdirSync(join(tmpDir, 'src', 'utils'), { recursive: true });
     mkdirSync(join(tmpDir, 'src', 'cli'), { recursive: true });

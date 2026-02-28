@@ -15,7 +15,7 @@ describe('Claude Code Adapter with BudgetPruner', () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    tempDir = join(tmpdir(), `sparn-cc-adapter-test-${Date.now()}`);
+    tempDir = join(tmpdir(), `cortex-cc-adapter-test-${Date.now()}`);
     mkdirSync(tempDir, { recursive: true });
     memory = await createKVMemory(join(tempDir, 'test.db'));
   });

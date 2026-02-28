@@ -43,10 +43,10 @@ function getMaxSourceMtime(srcDir: string): number {
   return maxMtime;
 }
 
-function readTimestamp(sparnDir: string): number {
+function readTimestamp(cortexDir: string): number {
   const { existsSync, readFileSync } = require('node:fs');
   try {
-    const tsFile = join(sparnDir, 'docs-gen-timestamp');
+    const tsFile = join(cortexDir, 'docs-gen-timestamp');
     if (!existsSync(tsFile)) return 0;
     const content = readFileSync(tsFile, 'utf-8').trim();
     const ts = Number(content);
@@ -56,13 +56,13 @@ function readTimestamp(sparnDir: string): number {
   }
 }
 
-function writeTimestamp(sparnDir: string): void {
+function writeTimestamp(cortexDir: string): void {
   const { existsSync, mkdirSync: mkdir, writeFileSync: writeFile } = require('node:fs');
   try {
-    if (!existsSync(sparnDir)) {
-      mkdir(sparnDir, { recursive: true });
+    if (!existsSync(cortexDir)) {
+      mkdir(cortexDir, { recursive: true });
     }
-    writeFile(join(sparnDir, 'docs-gen-timestamp'), String(Date.now()), 'utf-8');
+    writeFile(join(cortexDir, 'docs-gen-timestamp'), String(Date.now()), 'utf-8');
   } catch {
     // Best-effort
   }
@@ -71,12 +71,12 @@ function writeTimestamp(sparnDir: string): void {
 describe('Stop Docs Refresh Hook Logic', () => {
   const tmpDir = join(process.cwd(), '.test-stop-docs-tmp');
   const srcDir = join(tmpDir, 'src');
-  const sparnDir = join(tmpDir, '.sparn');
+  const cortexDir = join(tmpDir, '.cortex');
 
   beforeEach(() => {
     rmSync(tmpDir, { recursive: true, force: true });
     mkdirSync(srcDir, { recursive: true });
-    mkdirSync(sparnDir, { recursive: true });
+    mkdirSync(cortexDir, { recursive: true });
   });
 
   afterEach(() => {
@@ -127,29 +127,29 @@ describe('Stop Docs Refresh Hook Logic', () => {
   });
 
   it('should return 0 when timestamp file does not exist', () => {
-    const ts = readTimestamp(sparnDir);
+    const ts = readTimestamp(cortexDir);
     expect(ts).toBe(0);
   });
 
   it('should read a valid timestamp', () => {
     const now = Date.now();
-    writeFileSync(join(sparnDir, 'docs-gen-timestamp'), String(now), 'utf-8');
+    writeFileSync(join(cortexDir, 'docs-gen-timestamp'), String(now), 'utf-8');
 
-    const ts = readTimestamp(sparnDir);
+    const ts = readTimestamp(cortexDir);
     expect(ts).toBe(now);
   });
 
   it('should return 0 for malformed timestamp', () => {
-    writeFileSync(join(sparnDir, 'docs-gen-timestamp'), 'not-a-number', 'utf-8');
+    writeFileSync(join(cortexDir, 'docs-gen-timestamp'), 'not-a-number', 'utf-8');
 
-    const ts = readTimestamp(sparnDir);
+    const ts = readTimestamp(cortexDir);
     expect(ts).toBe(0);
   });
 
   it('should write and read back a timestamp', () => {
-    writeTimestamp(sparnDir);
+    writeTimestamp(cortexDir);
 
-    const ts = readTimestamp(sparnDir);
+    const ts = readTimestamp(cortexDir);
     expect(ts).toBeGreaterThan(0);
     // Should be within the last second
     expect(Date.now() - ts).toBeLessThan(1000);
@@ -157,13 +157,13 @@ describe('Stop Docs Refresh Hook Logic', () => {
 
   it('should trigger refresh when src file is newer than timestamp', async () => {
     // Write an old timestamp
-    writeFileSync(join(sparnDir, 'docs-gen-timestamp'), String(Date.now() - 60000), 'utf-8');
+    writeFileSync(join(cortexDir, 'docs-gen-timestamp'), String(Date.now() - 60000), 'utf-8');
 
     // Wait a bit, then create a source file
     await new Promise((r) => setTimeout(r, 10));
     writeFileSync(join(srcDir, 'new-file.ts'), 'export const x = 1;');
 
-    const lastGen = readTimestamp(sparnDir);
+    const lastGen = readTimestamp(cortexDir);
     const maxMtime = getMaxSourceMtime(srcDir);
 
     expect(maxMtime).toBeGreaterThan(lastGen);
@@ -173,9 +173,9 @@ describe('Stop Docs Refresh Hook Logic', () => {
     writeFileSync(join(srcDir, 'old.ts'), 'export const old = true;');
 
     // Write a future timestamp
-    writeFileSync(join(sparnDir, 'docs-gen-timestamp'), String(Date.now() + 60000), 'utf-8');
+    writeFileSync(join(cortexDir, 'docs-gen-timestamp'), String(Date.now() + 60000), 'utf-8');
 
-    const lastGen = readTimestamp(sparnDir);
+    const lastGen = readTimestamp(cortexDir);
     const maxMtime = getMaxSourceMtime(srcDir);
 
     expect(maxMtime).toBeLessThanOrEqual(lastGen);
@@ -184,7 +184,7 @@ describe('Stop Docs Refresh Hook Logic', () => {
   it('should trigger when timestamp file is missing (first run)', () => {
     writeFileSync(join(srcDir, 'index.ts'), 'export const main = true;');
 
-    const lastGen = readTimestamp(sparnDir); // Returns 0
+    const lastGen = readTimestamp(cortexDir); // Returns 0
     const maxMtime = getMaxSourceMtime(srcDir);
 
     expect(lastGen).toBe(0);
@@ -197,13 +197,13 @@ describe('Stop Docs Refresh Hook Logic', () => {
     expect(mtime).toBe(0);
   });
 
-  it('should create .sparn dir if missing when writing timestamp', () => {
-    const newSparnDir = join(tmpDir, 'new-project', '.sparn');
+  it('should create .cortex dir if missing when writing timestamp', () => {
+    const newCortexDir = join(tmpDir, 'new-project', '.cortex');
     rmSync(join(tmpDir, 'new-project'), { recursive: true, force: true });
 
-    writeTimestamp(newSparnDir);
+    writeTimestamp(newCortexDir);
 
-    const ts = readTimestamp(newSparnDir);
+    const ts = readTimestamp(newCortexDir);
     expect(ts).toBeGreaterThan(0);
 
     // Cleanup

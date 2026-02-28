@@ -4,7 +4,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { KVMemory } from '../../src/core/kv-memory.js';
 import { createKVMemory } from '../../src/core/kv-memory.js';
-import { createSparnMcpServer } from '../../src/mcp/server.js';
+import { createCortexMcpServer } from '../../src/mcp/server.js';
 
 describe('MCP server integration', () => {
   const testDir = './.test-mcp';
@@ -16,7 +16,7 @@ describe('MCP server integration', () => {
     await mkdir(testDir, { recursive: true });
     memory = await createKVMemory(dbPath);
 
-    const mcpServer = createSparnMcpServer({ memory });
+    const mcpServer = createCortexMcpServer({ memory });
     client = new Client({ name: 'test-client', version: '1.0.0' });
 
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -34,10 +34,10 @@ describe('MCP server integration', () => {
       const result = await client.listTools();
       const toolNames = result.tools.map((t) => t.name);
 
-      expect(toolNames).toContain('sparn_optimize');
-      expect(toolNames).toContain('sparn_stats');
-      expect(toolNames).toContain('sparn_consolidate');
-      expect(toolNames).toContain('sparn_search');
+      expect(toolNames).toContain('cortex_optimize');
+      expect(toolNames).toContain('cortex_stats');
+      expect(toolNames).toContain('cortex_consolidate');
+      expect(toolNames).toContain('cortex_search');
       expect(result.tools.length).toBe(4);
     });
 
@@ -49,19 +49,19 @@ describe('MCP server integration', () => {
       }
     });
 
-    it('sparn_optimize has input schema with required context parameter', async () => {
+    it('cortex_optimize has input schema with required context parameter', async () => {
       const result = await client.listTools();
-      const optimizeTool = result.tools.find((t) => t.name === 'sparn_optimize');
+      const optimizeTool = result.tools.find((t) => t.name === 'cortex_optimize');
       expect(optimizeTool).toBeDefined();
       expect(optimizeTool?.inputSchema).toBeDefined();
       expect(optimizeTool?.inputSchema.properties).toHaveProperty('context');
     });
   });
 
-  describe('sparn_optimize', () => {
+  describe('cortex_optimize', () => {
     it('optimizes context and returns valid result', async () => {
       const result = await client.callTool({
-        name: 'sparn_optimize',
+        name: 'cortex_optimize',
         arguments: {
           context: 'Important function definition\nTemporary debug log\nAPI endpoint configuration',
           dryRun: true,
@@ -87,7 +87,7 @@ describe('MCP server integration', () => {
 
     it('returns verbose details when requested', async () => {
       const result = await client.callTool({
-        name: 'sparn_optimize',
+        name: 'cortex_optimize',
         arguments: {
           context: 'Line one\nLine two\nLine three',
           dryRun: true,
@@ -104,7 +104,7 @@ describe('MCP server integration', () => {
       const entriesBefore = await memory.list();
 
       await client.callTool({
-        name: 'sparn_optimize',
+        name: 'cortex_optimize',
         arguments: {
           context: 'Test context for dry run',
           dryRun: true,
@@ -117,7 +117,7 @@ describe('MCP server integration', () => {
 
     it('non-dry-run persists entries to memory', async () => {
       await client.callTool({
-        name: 'sparn_optimize',
+        name: 'cortex_optimize',
         arguments: {
           context: 'Test context to persist\nAnother line to save',
           dryRun: false,
@@ -130,7 +130,7 @@ describe('MCP server integration', () => {
 
     it('accepts custom pruning threshold', async () => {
       const result = await client.callTool({
-        name: 'sparn_optimize',
+        name: 'cortex_optimize',
         arguments: {
           context: 'Line 1\nLine 2\nLine 3\nLine 4\nLine 5',
           dryRun: true,
@@ -144,7 +144,7 @@ describe('MCP server integration', () => {
 
     it('returns optimized context text', async () => {
       const result = await client.callTool({
-        name: 'sparn_optimize',
+        name: 'cortex_optimize',
         arguments: {
           context: 'Keep this important line',
           dryRun: true,
@@ -157,10 +157,10 @@ describe('MCP server integration', () => {
     });
   });
 
-  describe('sparn_stats', () => {
+  describe('cortex_stats', () => {
     it('returns statistics with zero commands initially', async () => {
       const result = await client.callTool({
-        name: 'sparn_stats',
+        name: 'cortex_stats',
         arguments: {},
       });
 
@@ -174,14 +174,14 @@ describe('MCP server integration', () => {
     it('returns accumulated stats after optimizations', async () => {
       // Run an optimization first (non-dry-run to record stats)
       await client.callTool({
-        name: 'sparn_optimize',
+        name: 'cortex_optimize',
         arguments: {
           context: 'First optimization run with some content\nMultiple lines\nImportant data',
         },
       });
 
       const result = await client.callTool({
-        name: 'sparn_stats',
+        name: 'cortex_stats',
         arguments: {},
       });
 
@@ -194,7 +194,7 @@ describe('MCP server integration', () => {
     it('resets statistics when reset=true', async () => {
       // Run an optimization to create some stats
       await client.callTool({
-        name: 'sparn_optimize',
+        name: 'cortex_optimize',
         arguments: {
           context: 'Generate stats to reset',
         },
@@ -202,7 +202,7 @@ describe('MCP server integration', () => {
 
       // Reset
       const resetResult = await client.callTool({
-        name: 'sparn_stats',
+        name: 'cortex_stats',
         arguments: { reset: true },
       });
 
@@ -214,7 +214,7 @@ describe('MCP server integration', () => {
 
       // Verify stats are actually cleared
       const statsResult = await client.callTool({
-        name: 'sparn_stats',
+        name: 'cortex_stats',
         arguments: {},
       });
 
@@ -225,10 +225,10 @@ describe('MCP server integration', () => {
     });
   });
 
-  describe('sparn_consolidate', () => {
+  describe('cortex_consolidate', () => {
     it('runs consolidation on empty memory', async () => {
       const result = await client.callTool({
-        name: 'sparn_consolidate',
+        name: 'cortex_consolidate',
         arguments: {},
       });
 
@@ -243,7 +243,7 @@ describe('MCP server integration', () => {
     it('runs consolidation after adding entries', async () => {
       // First optimize to populate memory
       await client.callTool({
-        name: 'sparn_optimize',
+        name: 'cortex_optimize',
         arguments: {
           context: 'Entry one\nEntry two\nEntry three\nEntry four\nEntry five',
         },
@@ -252,7 +252,7 @@ describe('MCP server integration', () => {
       const entriesBefore = await memory.list();
 
       const result = await client.callTool({
-        name: 'sparn_consolidate',
+        name: 'cortex_consolidate',
         arguments: {},
       });
 
@@ -267,10 +267,10 @@ describe('MCP server integration', () => {
 
   describe('error handling', () => {
     it('handles missing required context parameter gracefully', async () => {
-      // Calling sparn_optimize without context should return an error
+      // Calling cortex_optimize without context should return an error
       try {
         const result = await client.callTool({
-          name: 'sparn_optimize',
+          name: 'cortex_optimize',
           arguments: {},
         });
         // If the SDK returns a result instead of throwing, check for error
@@ -286,7 +286,7 @@ describe('MCP server integration', () => {
 
   describe('server creation', () => {
     it('creates server with default config', () => {
-      const mcpServer = createSparnMcpServer({ memory });
+      const mcpServer = createCortexMcpServer({ memory });
       expect(mcpServer).toBeDefined();
     });
 
@@ -302,15 +302,15 @@ describe('MCP server integration', () => {
           tokenBudget: 50000,
           autoOptimizeThreshold: 80000,
           watchPatterns: ['**/*.jsonl'],
-          pidFile: '.sparn/daemon.pid',
-          logFile: '.sparn/daemon.log',
+          pidFile: '.cortex/daemon.pid',
+          logFile: '.cortex/daemon.log',
           debounceMs: 5000,
           incremental: true,
           windowSize: 500,
         },
       };
 
-      const mcpServer = createSparnMcpServer({
+      const mcpServer = createCortexMcpServer({
         memory,
         config: customConfig,
       });

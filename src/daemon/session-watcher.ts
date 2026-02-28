@@ -20,13 +20,13 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { type ContextPipeline, createContextPipeline } from '../core/context-pipeline.js';
 import { getMetrics } from '../core/metrics.js';
-import type { SparnConfig } from '../types/config.js';
+import type { CortexConfig } from '../types/config.js';
 import { estimateTokens } from '../utils/tokenizer.js';
 import { createFileTracker } from './file-tracker.js';
 
 export interface SessionWatcherConfig {
-  /** Sparn configuration */
-  config: SparnConfig;
+  /** Cortex configuration */
+  config: CortexConfig;
   /** Callback when optimization triggered */
   onOptimize?: (sessionId: string, stats: SessionStats) => void;
   /** Callback on error */
@@ -86,8 +86,8 @@ export interface SessionWatcher {
  * @returns SessionWatcher instance
  */
 export function createSessionWatcher(config: SessionWatcherConfig): SessionWatcher {
-  const { config: sparnConfig, onOptimize, onError } = config;
-  const { realtime, decay, states } = sparnConfig;
+  const { config: cortexConfig, onOptimize, onError } = config;
+  const { realtime, decay, states } = cortexConfig;
 
   // Per-session pipelines and trackers
   const pipelines = new Map<string, ContextPipeline>();
@@ -299,7 +299,7 @@ export function createSessionWatcher(config: SessionWatcherConfig): SessionWatch
    * State persistence path
    */
   function getStatePath(): string {
-    return join(homedir(), '.sparn', 'optimizer-state.json');
+    return join(homedir(), '.cortex', 'optimizer-state.json');
   }
 
   /**

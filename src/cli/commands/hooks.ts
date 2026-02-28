@@ -36,8 +36,8 @@ const STOP_DOCS_EVENT = 'Stop';
 // Matcher for which tools trigger the post-tool hook
 const POST_TOOL_MATCHER = 'Bash|Read|Grep|Glob';
 
-// Marker to identify sparn-managed hooks
-const SPARN_MARKER = 'sparn';
+// Marker to identify cortex-managed hooks
+const CORTEX_MARKER = 'cortex';
 
 interface HookHandler {
   type: string;
@@ -139,8 +139,8 @@ function installHooks(
         ? (settings['hooks'] as HooksConfig)
         : {};
 
-    // Remove any existing sparn hooks first (clean install)
-    removeSparnHooks(hooks);
+    // Remove any existing cortex hooks first (clean install)
+    removeCortexHooks(hooks);
 
     // Add UserPromptSubmit hook (pre-prompt optimization)
     if (!hooks[PRE_PROMPT_EVENT]) {
@@ -225,7 +225,7 @@ function uninstallHooks(settingsPath: string, global?: boolean): HooksCommandRes
 
     if (settings['hooks'] && typeof settings['hooks'] === 'object' && settings['hooks'] !== null) {
       const hooks = settings['hooks'] as HooksConfig;
-      removeSparnHooks(hooks);
+      removeCortexHooks(hooks);
 
       // Remove empty event arrays
       for (const event of Object.keys(hooks)) {
@@ -276,21 +276,21 @@ function hooksStatus(settingsPath: string, global?: boolean): HooksCommandResult
         ? (settings['hooks'] as HooksConfig)
         : {};
 
-    const prePromptHook = findSparnHook(hooks, PRE_PROMPT_EVENT);
-    const postToolHook = findSparnHook(hooks, POST_TOOL_EVENT);
-    const stopDocsHook = findSparnHook(hooks, STOP_DOCS_EVENT);
+    const prePromptHook = findCortexHook(hooks, PRE_PROMPT_EVENT);
+    const postToolHook = findCortexHook(hooks, POST_TOOL_EVENT);
+    const stopDocsHook = findCortexHook(hooks, STOP_DOCS_EVENT);
 
     if (!prePromptHook && !postToolHook && !stopDocsHook) {
       return {
         success: true,
-        message: global ? 'No global sparn hooks installed' : 'No project sparn hooks installed',
+        message: global ? 'No global cortex hooks installed' : 'No project cortex hooks installed',
         installed: false,
       };
     }
 
     return {
       success: true,
-      message: global ? 'Global sparn hooks active' : 'Project sparn hooks active',
+      message: global ? 'Global cortex hooks active' : 'Project cortex hooks active',
       installed: true,
       hookPaths: {
         prePrompt: prePromptHook || '(not installed)',
@@ -308,32 +308,32 @@ function hooksStatus(settingsPath: string, global?: boolean): HooksCommandResult
 }
 
 /**
- * Remove all sparn-managed hooks from the config
+ * Remove all cortex-managed hooks from the config
  */
-function removeSparnHooks(hooks: HooksConfig): void {
+function removeCortexHooks(hooks: HooksConfig): void {
   for (const event of Object.keys(hooks)) {
     if (!Array.isArray(hooks[event])) continue;
     hooks[event] = hooks[event].filter((group) => {
       if (!Array.isArray(group.hooks)) return true;
-      // Remove groups where any hook command contains "sparn"
+      // Remove groups where any hook command contains "cortex"
       return !group.hooks.some(
-        (h) => typeof h.command === 'string' && h.command.includes(SPARN_MARKER),
+        (h) => typeof h.command === 'string' && h.command.includes(CORTEX_MARKER),
       );
     });
   }
 }
 
 /**
- * Find a sparn hook command for a given event
+ * Find a cortex hook command for a given event
  */
-function findSparnHook(hooks: HooksConfig, event: string): string | null {
+function findCortexHook(hooks: HooksConfig, event: string): string | null {
   const groups = hooks[event];
   if (!Array.isArray(groups)) return null;
 
   for (const group of groups) {
     if (!Array.isArray(group.hooks)) continue;
     for (const h of group.hooks) {
-      if (typeof h.command === 'string' && h.command.includes(SPARN_MARKER)) {
+      if (typeof h.command === 'string' && h.command.includes(CORTEX_MARKER)) {
         return h.command;
       }
     }
